@@ -9,3 +9,5 @@ description = "cli to help check and update git repos"
 
 [dependencies]
 clap = { version = "4.1.11", features = ["derive"] }
+home = "0.5.4"
+yaml-rust = "0.4.5"

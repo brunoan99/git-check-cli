@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
@@ -8,18 +6,6 @@ use clap::{Parser, Subcommand};
 pub struct Cli {
   #[command(subcommand)]
   pub command: Commands,
-
-  /// Turn verbose mode on
-  #[arg(short, long)]
-  pub verbose: bool,
-
-  /// Sets a custom config file
-  #[arg(short, long, value_name = "FILE")]
-  pub config: Option<PathBuf>,
-
-  /// Sets a custom project list file
-  #[arg(short, long, value_name = "FILE")]
-  pub paths: Option<PathBuf>,
 }
 
 #[derive(Subcommand)]
