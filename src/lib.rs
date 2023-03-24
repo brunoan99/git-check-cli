@@ -15,7 +15,7 @@ pub enum Commands {
   /// Check a specific project
   CheckPath { name: String },
   /// Add a new project to the list of tracked projects
-  AddPath { path: String },
+  AddPath { name: String, path: String },
   /// Remove a project from the list of tracked projects
-  RemovePath { path: String },
+  RemovePath {},
 }
