@@ -11,4 +11,5 @@ description = "cli to help check and update git repos"
 clap = { version = "4.1.11", features = ["derive"] }
 home = "0.5.4"
 inquire = "0.6.0"
+linked-hash-map = "0.5.6"
 yaml-rust = "0.4.5"

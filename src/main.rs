@@ -1,12 +1,13 @@
 #[path = "cli/cli.rs"]
 mod cli;
-use inquire::{Select, Text};
+use inquire::{Confirm, Select, Text};
+use linked_hash_map::LinkedHashMap;
 use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
 use std::process::{self, Command};
 use std::str::from_utf8;
 use std::{ffi::OsString, fs};
-use yaml_rust::{Yaml, YamlLoader};
+use yaml_rust::{Yaml, YamlEmitter, YamlLoader};
 
 use clap::Parser;
 
@@ -24,6 +25,17 @@ impl Project {
       name: String::from(String::from(yaml["name"].as_str().unwrap())),
       path: String::from(String::from(yaml["path"].as_str().unwrap())),
     }
+  }
+
+  fn to_yaml(&self) -> Yaml {
+    let yaml_id = Yaml::Integer(self.id);
+    let yaml_name = Yaml::String(self.name.clone());
+    let yaml_path = Yaml::String(self.path.clone());
+    let mut map: LinkedHashMap<Yaml, Yaml> = LinkedHashMap::new();
+    map.insert(Yaml::String(String::from("id")), yaml_id);
+    map.insert(Yaml::String(String::from("name")), yaml_name);
+    map.insert(Yaml::String(String::from("path")), yaml_path);
+    Yaml::Hash(map)
   }
 }
 
@@ -50,8 +62,8 @@ struct ProjectList {
 
 impl ProjectList {
   fn from_yaml_vec(yaml: &Vec<Yaml>) -> Option<ProjectList> {
-    let project_list = &yaml[0]["project-list"];
-    let vec_projects = project_list.as_vec().unwrap();
+    let projects_list = &yaml[0]["projects-list"];
+    let vec_projects = projects_list.as_vec().unwrap();
 
     let mut vec_paths: Vec<Project> = vec![];
     for item in vec_projects {
@@ -62,17 +74,27 @@ impl ProjectList {
     Some(Self { vec: vec_paths })
   }
 
+  fn to_yaml_vec(&self) -> Yaml {
+    let array: Vec<Yaml> = self.vec.iter().map(|item| item.to_yaml()).collect();
+    let mut map: LinkedHashMap<Yaml, Yaml> = LinkedHashMap::new();
+    map.insert(
+      Yaml::String(String::from("projects-list")),
+      Yaml::Array(array),
+    );
+    Yaml::Hash(map)
+  }
+
   fn filter_by_id(&self, id: i64) -> ProjectList {
-    let mut new_project_list: Vec<Project> = vec![];
+    let mut new_projects_list: Vec<Project> = vec![];
 
     for item in self.vec.iter() {
       if item.id != id {
-        new_project_list.push(item.clone())
+        new_projects_list.push(item.clone())
       }
     }
 
     ProjectList {
-      vec: new_project_list,
+      vec: new_projects_list,
     }
   }
 }
@@ -90,7 +112,7 @@ fn error_in_selection() {
   process::exit(1);
 }
 
-fn path_of_project_list_file(home_path: PathBuf) -> Result<String, OsString> {
+fn path_of_projects_list_file(home_path: PathBuf) -> Result<String, OsString> {
   let mut project_file_paths = home_path;
   project_file_paths.push(".config/git-check-cli/git-check-cli");
   project_file_paths.set_extension("yaml");
@@ -118,19 +140,17 @@ fn _eval_path_to_absolute(exp: String) -> Result<String, _EvalError> {
 }
 
 fn main() {
-  println!("Starting git-check-cli");
-
   let home_path = home::home_dir().unwrap_or_else(|| {
     eprintln!("Problem finding home directory!");
     process::exit(1);
   });
 
-  let projects_file = path_of_project_list_file(home_path).unwrap_or_else(|_| {
+  let projects_file = path_of_projects_list_file(home_path).unwrap_or_else(|_| {
     eprintln!("Problem getting projects file path");
     process::exit(1)
   });
 
-  let contents = fs::read_to_string(projects_file).unwrap_or_else(|err| {
+  let contents = fs::read_to_string(projects_file.clone()).unwrap_or_else(|err| {
     eprintln!("Problem reading projects list file, error: {}", err);
     process::exit(1);
   });
@@ -140,19 +160,20 @@ fn main() {
     process::exit(1);
   });
 
-  let project_list = ProjectList::from_yaml_vec(&configs.clone()).unwrap_or_else(|| {
+  let projects_list = ProjectList::from_yaml_vec(&configs.clone()).unwrap_or_else(|| {
     eprintln!("Problem parsing yaml to projec list");
     process::exit(1);
   });
 
   let options = cli::Options::parse();
+  println!("Starting git-check-cli");
 
   match &options.command {
     cli::Commands::Check => {
       // projects_file
     }
     cli::Commands::CheckPath {} => {
-      let check_ans = Select::new("chose to check: ", project_list.vec).prompt();
+      let check_ans = Select::new("chose to check: ", projects_list.vec).prompt();
       match check_ans {
         Ok(to_check) => println!("chose to be checked: {}", to_check),
         _ => error_in_selection(),
@@ -167,7 +188,7 @@ fn main() {
           match path_ans {
             Ok(path) => {
               println!("Project path selected: {}", path);
-              let id = project_list.vec.last().unwrap().id + 1;
+              let id = projects_list.vec.last().unwrap().id + 1;
               println!("Generated id: {}", id)
             }
             _ => error_in_selection(),
@@ -177,12 +198,35 @@ fn main() {
       }
     }
     cli::Commands::RemovePath {} => {
-      let remove_ans = Select::new("chose to remove: ", project_list.vec.clone()).prompt();
+      let remove_ans = Select::new("chose to remove: ", projects_list.vec.clone()).prompt();
       match remove_ans {
         Ok(to_remove) => {
-          println!("chose to remove: {} | id: {}", to_remove, to_remove.id);
-          let new_project_list = project_list.filter_by_id(to_remove.id);
-          println!("{:#?}", new_project_list)
+          let confirm_ans = Confirm::new("Confirm to remove the selected path from projects list")
+            .with_default(true)
+            .prompt();
+          match confirm_ans {
+            Ok(true) => {
+              let yaml_projects_list = projects_list.filter_by_id(to_remove.id).to_yaml_vec();
+              let mut out_str = String::new();
+              let mut emitter = YamlEmitter::new(&mut out_str);
+              emitter.dump(&yaml_projects_list).unwrap();
+              match fs::write(projects_file, out_str) {
+                Ok(_) => {
+                  println!("Project removed successfully");
+                  process::exit(0);
+                }
+                Err(err) => {
+                  eprintln!("failed to sync with file, err: {}", err);
+                  process::exit(1)
+                }
+              }
+            }
+            Ok(false) => {
+              println!("Project not removed");
+              process::exit(0);
+            }
+            Err(_) => error_in_selection(),
+          }
         }
         _ => error_in_selection(),
       }
