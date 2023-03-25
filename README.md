@@ -15,17 +15,20 @@ The path in projects list always needs to be absolute, relative paths will not w
 
 **NEVER** switch a $HOME for a plain text in the project file
 
-**USE ListOption To Solve this**
-remove path should get all paths and names from the project list and give from user suggestions based on
-- think about link a path and a id to do the remove and garantee that the path being removed is correct
-- paths that evaluate to same thing isn't the same thing
-  - example:
-    $HOME/test-dir
-    $TEST_DIR
+**Unnecessary Evaluation**
+Isnt need to eval all of the paths in the project-list, the reference is part of the path, than is better to show the user with the path and later evaluate it to an absolute path to do checks
 
-    both will be the same if $TEST_DIR evaluates to $HOME/test-dir or if $TEST_DIR evaluates to the same of evaluates of $HOME/test-dir
-    than is needed to link the path and the id or something like this
-      - check if its possible to pass something like option_text(id, string) and the display property is the string field
+Example:
+  - $HOME/test-dir
+  - $TEST_DIR
+  - other/path/
 
+  if first and second options evaluates to the same thing (it's possible) than the user can be confused with what option choose. Like:
+  - evaluate/to/it
+  - evaluate/to/it
+  - other/path/
 
-after the choose, use the name of the project and check if user confirm the remove
+  an user can simply move the reference and the folder of $TEST_DIR and after it $TEST_DIR and $HOME/test-dir will not be the same path, and removing the unwanted but same path will break this in future.
+
+  than display like the first list is far better than the second.
+

@@ -10,12 +10,12 @@ pub struct Options {
 
 #[derive(Subcommand)]
 pub enum Commands {
-  /// Check all projects being tracked
+  /// Check all projects being tracked, and do some computations on project list
   Check,
   /// Check a specific project
-  CheckPath { name: String },
+  CheckPath {},
   /// Add a new project to the list of tracked projects
-  AddPath { name: String, path: String },
+  AddPath {},
   /// Remove a project from the list of tracked projects
   RemovePath {},
 }
