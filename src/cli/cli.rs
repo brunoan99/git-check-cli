@@ -1,9 +1,9 @@
-use clap::{Parser, Subcommand};
+use clap::{command, Parser, Subcommand};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 #[command(propagate_version = true)]
-pub struct Cli {
+pub struct Options {
   #[command(subcommand)]
   pub command: Commands,
 }
