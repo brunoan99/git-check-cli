@@ -96,9 +96,7 @@ fn main() {
     }
     cli::Commands::RemovePath {} => {
       let options: Vec<&str> = vec!["name", "path"];
-      let ans = Select::new("remove by: ", options)
-        .with_help_message("text message")
-        .prompt();
+      let ans = Select::new("remove by: ", options).prompt();
 
       match ans {
         Ok("name") => println!("name! was chosen"), // TODO: another Select prompt to select which project by name to remove
@@ -110,10 +108,19 @@ fn main() {
               process::exit(1);
             }
           };
-          println!("{:#?}", hydrated_vec);
-        } // TODO: another Select prompt to select which project by path to remove
-        Ok(_) => println!("There was an error, please try again"),
-        Err(_) => println!("There was an error, please try again"),
+          let remove_ans = Select::new("chose to remove: ", hydrated_vec).prompt();
+          match remove_ans {
+            Ok(to_remove) => println!("chose to remove: {}", to_remove),
+            _ => {
+              eprintln!("Error in selection, please try again");
+              process::exit(1);
+            }
+          }
+        }
+        _ => {
+          eprintln!("Error in selection, please try again");
+          process::exit(1);
+        }
       }
     }
   }
