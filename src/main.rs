@@ -24,8 +24,8 @@ impl Project {
 
   fn from_yaml(yaml: &Yaml) -> Project {
     Self {
-      name: String::from(String::from(yaml["name"].as_str().unwrap())),
-      path: String::from(String::from(yaml["path"].as_str().unwrap())),
+      name: String::from(yaml["name"].as_str().unwrap()),
+      path: String::from(yaml["path"].as_str().unwrap()),
     }
   }
 
@@ -98,7 +98,7 @@ impl ProjectList {
   }
 
   fn add_new_project(self, new: Project) -> ProjectList {
-    let mut project_list = self.vec.clone();
+    let mut project_list = self.vec;
     project_list.push(new);
     ProjectList { vec: project_list }
   }
@@ -131,7 +131,7 @@ fn _eval_path_to_absolute(exp: String) -> Result<String, _EvalError> {
   cmd.args(["-c", &path_to_eval]);
   let mut output = match cmd.output() {
     Ok(out) => out,
-    Err(err) => return Err(_EvalError(String::from(err.to_string()))),
+    Err(err) => return Err(_EvalError(err.to_string())),
   };
   output
     .stdout
@@ -165,7 +165,7 @@ fn main() {
     process::exit(1);
   });
 
-  let projects_list = ProjectList::from_yaml_vec(&configs.clone()).unwrap_or_else(|| {
+  let projects_list = ProjectList::from_yaml_vec(&configs).unwrap_or_else(|| {
     eprintln!("Problem parsing yaml to projec list");
     process::exit(1);
   });
