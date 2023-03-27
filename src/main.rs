@@ -13,30 +13,26 @@ use clap::Parser;
 
 #[derive(Debug)]
 struct Project {
-  id: i64,
   name: String,
   path: String,
 }
 
 impl Project {
-  fn new(id: i64, name: String, path: String) -> Project {
-    Project { id, name, path }
+  fn new(name: String, path: String) -> Project {
+    Project { name, path }
   }
 
   fn from_yaml(yaml: &Yaml) -> Project {
     Self {
-      id: yaml["id"].as_i64().unwrap(),
       name: String::from(String::from(yaml["name"].as_str().unwrap())),
       path: String::from(String::from(yaml["path"].as_str().unwrap())),
     }
   }
 
   fn to_yaml(&self) -> Yaml {
-    let yaml_id = Yaml::Integer(self.id);
     let yaml_name = Yaml::String(self.name.clone());
     let yaml_path = Yaml::String(self.path.clone());
     let mut map: LinkedHashMap<Yaml, Yaml> = LinkedHashMap::new();
-    map.insert(Yaml::String(String::from("id")), yaml_id);
     map.insert(Yaml::String(String::from("name")), yaml_name);
     map.insert(Yaml::String(String::from("path")), yaml_path);
     Yaml::Hash(map)
@@ -52,7 +48,6 @@ impl Display for Project {
 impl Clone for Project {
   fn clone(&self) -> Self {
     Self {
-      id: self.id.clone(),
       name: self.name.clone(),
       path: self.path.clone(),
     }
@@ -88,11 +83,11 @@ impl ProjectList {
     Yaml::Hash(map)
   }
 
-  fn remove_by_id(&self, id: i64) -> ProjectList {
+  fn remove_by_name(&self, name: String) -> ProjectList {
     let mut new_projects_list: Vec<Project> = vec![];
 
     for item in self.vec.iter() {
-      if item.id != id {
+      if item.name != name {
         new_projects_list.push(item.clone())
       }
     }
@@ -198,21 +193,33 @@ fn main() {
           let path_ans = Text::new("Project path").prompt();
           match path_ans {
             Ok(path) => {
-              let id = projects_list.vec.last().unwrap().id + 1;
-              let new_project = Project::new(id, name, path);
-              let yaml_projects_list = projects_list.add_new_project(new_project).to_yaml_vec();
-              let mut out_str = String::new();
-              let mut emitter = YamlEmitter::new(&mut out_str);
-              emitter.dump(&yaml_projects_list).unwrap();
-              match fs::write(projects_file, out_str) {
-                Ok(_) => {
-                  println!("Project removed successfully");
+              let new_project = Project::new(name, path);
+              println!("{}", new_project);
+              let confirm_ans = Confirm::new("Confirm to add to projects list")
+                .with_default(true)
+                .prompt();
+              match confirm_ans {
+                Ok(true) => {
+                  let yaml_projects_list = projects_list.add_new_project(new_project).to_yaml_vec();
+                  let mut out_str = String::new();
+                  let mut emitter = YamlEmitter::new(&mut out_str);
+                  emitter.dump(&yaml_projects_list).unwrap();
+                  match fs::write(projects_file, out_str) {
+                    Ok(_) => {
+                      println!("Project added successfully");
+                      process::exit(0);
+                    }
+                    Err(err) => {
+                      eprintln!("failed to sync with file, err: {}", err);
+                      process::exit(1)
+                    }
+                  }
+                }
+                Ok(false) => {
+                  println!("Project not added");
                   process::exit(0);
                 }
-                Err(err) => {
-                  eprintln!("failed to sync with file, err: {}", err);
-                  process::exit(1)
-                }
+                Err(_) => error_in_selection(),
               }
             }
             _ => error_in_selection(),
@@ -230,7 +237,7 @@ fn main() {
             .prompt();
           match confirm_ans {
             Ok(true) => {
-              let yaml_projects_list = projects_list.remove_by_id(to_remove.id).to_yaml_vec();
+              let yaml_projects_list = projects_list.remove_by_name(to_remove.name).to_yaml_vec();
               let mut out_str = String::new();
               let mut emitter = YamlEmitter::new(&mut out_str);
               emitter.dump(&yaml_projects_list).unwrap();
