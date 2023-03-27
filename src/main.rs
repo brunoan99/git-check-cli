@@ -18,15 +18,20 @@ struct Project {
 }
 
 impl Project {
-  fn new(name: String, path: String) -> Project {
-    Project { name, path }
+  const fn new(name: String, path: String) -> Self {
+    Self { name, path }
   }
 
-  fn from_yaml(yaml: &Yaml) -> Project {
-    Self {
-      name: String::from(yaml["name"].as_str().unwrap()),
-      path: String::from(yaml["path"].as_str().unwrap()),
-    }
+  fn from_yaml(yaml: &Yaml) -> Self {
+    let name = String::from(yaml["name"].as_str().unwrap_or_else(|| {
+      eprintln!("Error getting project name");
+      process::exit(1);
+    }));
+    let path = String::from(yaml["path"].as_str().unwrap_or_else(|| {
+      eprintln!("Error getting project path");
+      process::exit(1);
+    }));
+    Self { name, path }
   }
 
   fn to_yaml(&self) -> Yaml {
@@ -60,21 +65,24 @@ struct ProjectList {
 }
 
 impl ProjectList {
-  fn from_yaml_vec(yaml: &Vec<Yaml>) -> Option<ProjectList> {
+  fn from_yaml_vec(yaml: &Vec<Yaml>) -> Option<Self> {
     let projects_list = &yaml[0]["projects-list"];
-    let vec_projects = projects_list.as_vec().unwrap();
-
-    let mut vec_paths: Vec<Project> = vec![];
-    for item in vec_projects {
-      let project = Project::from_yaml(item);
-      vec_paths.push(project)
+    let vec_projects_option = projects_list.as_vec();
+    match vec_projects_option {
+      Some(vec_projects) => {
+        let mut vec_paths: Vec<Project> = vec![];
+        for item in vec_projects {
+          let project = Project::from_yaml(item);
+          vec_paths.push(project);
+        }
+        Some(Self { vec: vec_paths })
+      }
+      None => None,
     }
-
-    Some(Self { vec: vec_paths })
   }
 
   fn to_yaml_vec(&self) -> Yaml {
-    let array: Vec<Yaml> = self.vec.iter().map(|item| item.to_yaml()).collect();
+    let array: Vec<Yaml> = self.vec.iter().map(Project::to_yaml).collect();
     let mut map: LinkedHashMap<Yaml, Yaml> = LinkedHashMap::new();
     map.insert(
       Yaml::String(String::from("projects-list")),
@@ -83,24 +91,24 @@ impl ProjectList {
     Yaml::Hash(map)
   }
 
-  fn remove_by_name(&self, name: String) -> ProjectList {
+  fn remove_by_name(&self, name: &str) -> Self {
     let mut new_projects_list: Vec<Project> = vec![];
 
-    for item in self.vec.iter() {
+    for item in &self.vec {
       if item.name != name {
-        new_projects_list.push(item.clone())
+        new_projects_list.push(item.clone());
       }
     }
 
-    ProjectList {
+    Self {
       vec: new_projects_list,
     }
   }
 
-  fn add_new_project(self, new: Project) -> ProjectList {
+  fn add_new_project(self, new: Project) -> Self {
     let mut project_list = self.vec;
     project_list.push(new);
-    ProjectList { vec: project_list }
+    Self { vec: project_list }
   }
 }
 
@@ -125,8 +133,8 @@ fn path_of_projects_list_file(home_path: PathBuf) -> Result<String, OsString> {
 }
 
 struct _EvalError(String);
-fn _eval_path_to_absolute(exp: String) -> Result<String, _EvalError> {
-  let path_to_eval = ["/bin/echo", &exp].join(" ");
+fn _eval_path_to_absolute(exp: &str) -> Result<String, _EvalError> {
+  let path_to_eval = ["/bin/echo", exp].join(" ");
   let mut cmd = Command::new("sh");
   cmd.args(["-c", &path_to_eval]);
   let mut output = match cmd.output() {
@@ -138,7 +146,7 @@ fn _eval_path_to_absolute(exp: String) -> Result<String, _EvalError> {
     .resize(output.stdout.len() - 1, output.stdout[0]);
   Ok(String::from(from_utf8(&output.stdout).unwrap_or_else(
     |err| {
-      eprintln!("failed to parse evaluated path: {}", err);
+      eprintln!("failed to parse evaluated path: {err}");
       process::exit(1);
     },
   )))
@@ -156,12 +164,12 @@ fn main() {
   });
 
   let contents = fs::read_to_string(projects_file.clone()).unwrap_or_else(|err| {
-    eprintln!("Problem reading projects list file, error: {}", err);
+    eprintln!("Problem reading projects list file, error: {err}");
     process::exit(1);
   });
 
   let configs = YamlLoader::load_from_str(&contents).unwrap_or_else(|err| {
-    eprintln!("Problem parsing file, error: {}", err);
+    eprintln!("Problem parsing file, error: {err}");
     process::exit(1);
   });
 
@@ -181,7 +189,7 @@ fn main() {
     cli::Commands::CheckPath {} => {
       let check_ans = Select::new("chose to check: ", projects_list.vec).prompt();
       match check_ans {
-        Ok(to_check) => println!("chose to be checked: {}", to_check),
+        Ok(to_check) => println!("chose to be checked: {to_check}"),
         _ => error_in_selection(),
       }
     }
@@ -189,12 +197,12 @@ fn main() {
       let name_ans = Text::new("Project name").prompt();
       match name_ans {
         Ok(name) => {
-          println!("Project name selected: {}", name);
+          println!("Project name selected: {name}");
           let path_ans = Text::new("Project path").prompt();
           match path_ans {
             Ok(path) => {
               let new_project = Project::new(name, path);
-              println!("{}", new_project);
+              println!("{new_project}");
               let confirm_ans = Confirm::new("Confirm to add to projects list")
                 .with_default(true)
                 .prompt();
@@ -203,14 +211,17 @@ fn main() {
                   let yaml_projects_list = projects_list.add_new_project(new_project).to_yaml_vec();
                   let mut out_str = String::new();
                   let mut emitter = YamlEmitter::new(&mut out_str);
-                  emitter.dump(&yaml_projects_list).unwrap();
+                  emitter.dump(&yaml_projects_list).unwrap_or_else(|err| {
+                    eprintln!("Failed to write yaml projects list in file: {err}");
+                    process::exit(1);
+                  });
                   match fs::write(projects_file, out_str) {
                     Ok(_) => {
                       println!("Project added successfully");
                       process::exit(0);
                     }
                     Err(err) => {
-                      eprintln!("failed to sync with file, err: {}", err);
+                      eprintln!("failed to sync with file, err: {err}");
                       process::exit(1)
                     }
                   }
@@ -237,17 +248,22 @@ fn main() {
             .prompt();
           match confirm_ans {
             Ok(true) => {
-              let yaml_projects_list = projects_list.remove_by_name(to_remove.name).to_yaml_vec();
+              let yaml_projects_list = projects_list
+                .remove_by_name(to_remove.name.as_str())
+                .to_yaml_vec();
               let mut out_str = String::new();
               let mut emitter = YamlEmitter::new(&mut out_str);
-              emitter.dump(&yaml_projects_list).unwrap();
+              emitter.dump(&yaml_projects_list).unwrap_or_else(|err| {
+                eprintln!("Failed to write yaml projects list in file: {err}");
+                process::exit(1);
+              });
               match fs::write(projects_file, out_str) {
                 Ok(_) => {
                   println!("Project removed successfully");
                   process::exit(0);
                 }
                 Err(err) => {
-                  eprintln!("failed to sync with file, err: {}", err);
+                  eprintln!("failed to sync with file, err: {err}");
                   process::exit(1)
                 }
               }
