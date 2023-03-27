@@ -19,6 +19,10 @@ struct Project {
 }
 
 impl Project {
+  fn new(id: i64, name: String, path: String) -> Project {
+    Project { id, name, path }
+  }
+
   fn from_yaml(yaml: &Yaml) -> Project {
     Self {
       id: yaml["id"].as_i64().unwrap(),
@@ -84,7 +88,7 @@ impl ProjectList {
     Yaml::Hash(map)
   }
 
-  fn filter_by_id(&self, id: i64) -> ProjectList {
+  fn remove_by_id(&self, id: i64) -> ProjectList {
     let mut new_projects_list: Vec<Project> = vec![];
 
     for item in self.vec.iter() {
@@ -96,6 +100,12 @@ impl ProjectList {
     ProjectList {
       vec: new_projects_list,
     }
+  }
+
+  fn add_new_project(self, new: Project) -> ProjectList {
+    let mut project_list = self.vec.clone();
+    project_list.push(new);
+    ProjectList { vec: project_list }
   }
 }
 
@@ -166,6 +176,7 @@ fn main() {
   });
 
   let options = cli::Options::parse();
+
   println!("Starting git-check-cli");
 
   match &options.command {
@@ -187,9 +198,22 @@ fn main() {
           let path_ans = Text::new("Project path").prompt();
           match path_ans {
             Ok(path) => {
-              println!("Project path selected: {}", path);
               let id = projects_list.vec.last().unwrap().id + 1;
-              println!("Generated id: {}", id)
+              let new_project = Project::new(id, name, path);
+              let yaml_projects_list = projects_list.add_new_project(new_project).to_yaml_vec();
+              let mut out_str = String::new();
+              let mut emitter = YamlEmitter::new(&mut out_str);
+              emitter.dump(&yaml_projects_list).unwrap();
+              match fs::write(projects_file, out_str) {
+                Ok(_) => {
+                  println!("Project removed successfully");
+                  process::exit(0);
+                }
+                Err(err) => {
+                  eprintln!("failed to sync with file, err: {}", err);
+                  process::exit(1)
+                }
+              }
             }
             _ => error_in_selection(),
           }
@@ -206,7 +230,7 @@ fn main() {
             .prompt();
           match confirm_ans {
             Ok(true) => {
-              let yaml_projects_list = projects_list.filter_by_id(to_remove.id).to_yaml_vec();
+              let yaml_projects_list = projects_list.remove_by_id(to_remove.id).to_yaml_vec();
               let mut out_str = String::new();
               let mut emitter = YamlEmitter::new(&mut out_str);
               emitter.dump(&yaml_projects_list).unwrap();
