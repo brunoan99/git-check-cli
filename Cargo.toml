@@ -13,6 +13,7 @@ description = "cli to help check and update git repos"
 
 [dependencies]
 clap = { version = "4.1.11", features = ["derive"] }
+colored = "2.0.0"
 home = "0.5.4"
 inquire = "0.6.0"
 linked-hash-map = "0.5.6"

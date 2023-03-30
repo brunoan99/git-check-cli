@@ -1,10 +1,12 @@
 #[path = "cli/cli.rs"]
 mod cli;
+use colored::Colorize;
 use inquire::{Confirm, Select, Text};
 use linked_hash_map::LinkedHashMap;
 use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
-use std::process;
+use std::process::{self, Command};
+use std::str::from_utf8;
 use std::{ffi::OsString, fs};
 use yaml_rust::{Yaml, YamlEmitter, YamlLoader};
 
@@ -107,6 +109,7 @@ impl ProjectList {
   }
 }
 
+// proceess
 fn success_exit(msg: &str) {
   println!("{msg}");
   process::exit(0);
@@ -123,6 +126,75 @@ fn path_of_projects_list_file(home_path: PathBuf) -> Result<String, OsString> {
   project_file_paths.set_extension("yaml");
   project_file_paths.into_os_string().into_string()
 }
+
+#[derive(Debug)]
+struct EvalError(String);
+
+impl Display for EvalError {
+  fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+    write!(f, "Error Evaluating [error: {}]", self.0)
+  }
+}
+
+fn eval_path_to_absolute(exp: String) -> Result<String, EvalError> {
+  let path_to_eval = ["/bin/echo", &exp].join(" ");
+  let mut cmd = Command::new("sh");
+  cmd.args(["-c", &path_to_eval]);
+  let mut output = match cmd.output() {
+    Ok(out) => out,
+    Err(err) => return Err(EvalError(String::from(err.to_string()))),
+  };
+  output
+    .stdout
+    .resize(output.stdout.len() - 1, output.stdout[0]);
+  let abs_path = from_utf8(&output.stdout);
+  match abs_path {
+    Ok(absolute_path) => Ok(String::from(absolute_path)),
+    Err(err) => Err(EvalError(String::from(err.to_string()))),
+  }
+}
+
+// git
+
+struct Uncommited(String);
+
+impl Display for Uncommited {
+  fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+    write!(f, "Uncommited Changes in files: \n{}", self.0)
+  }
+}
+
+fn git_checkouts(path: String, name: String) -> Result<(), ()> {
+  let uncommited = check_uncommited_changes(path);
+  match uncommited {
+    Ok(_) => println!("\nProject ({}) checked", name.bold().yellow()),
+    Err(msg) => {
+      println!(
+        "\nProject ({}) has uncommitted changes",
+        name.bold().yellow()
+      );
+      println!("{}", msg);
+    }
+  };
+  Ok(())
+}
+
+fn check_uncommited_changes(path: String) -> Result<(), Uncommited> {
+  let check = Command::new("/bin/git")
+    .arg("status")
+    .arg("--short")
+    .current_dir(path)
+    .output()
+    .unwrap();
+  let result = from_utf8(&check.stdout).expect("failed to parse output");
+  if result.len() > 0 {
+    Err(Uncommited(String::from(result)))
+  } else {
+    Ok(())
+  }
+}
+
+// main
 
 fn setup_project_list() -> (String, ProjectList) {
   let home_path = home::home_dir().unwrap_or_else(|| {
@@ -171,7 +243,14 @@ fn main() {
           eprintln!("Error selecting project, err: {err}");
           process::exit(1);
         });
-      println!("chose to be checked: {project}");
+      let absolute_path = eval_path_to_absolute(project.path.clone()).unwrap_or_else(|err| {
+        eprintln!("Error getting absolute path: {}", err);
+        process::exit(1)
+      });
+      match git_checkouts(absolute_path.clone(), project.name.clone()) {
+        Ok(_) => println!("Checking completed successfully"),
+        Err(_) => {}
+      }
     }
     cli::Commands::AddPath {} => {
       let name = Text::new("Project name:").prompt().unwrap_or_else(|err| {
