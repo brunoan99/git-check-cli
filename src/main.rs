@@ -164,16 +164,27 @@ impl Display for Uncommited {
   }
 }
 
+struct Unpublished(String);
+
+impl Display for Unpublished {
+  fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+    write!(f, "Unpublished commits: \n{}", self.0)
+  }
+}
+
 fn git_checkouts(path: String, name: String) -> Result<(), ()> {
-  let uncommited = check_uncommited_changes(path);
-  match uncommited {
-    Ok(_) => println!("\nProject ({}) checked", name.bold().yellow()),
+  match check_uncommited_changes(path.clone()) {
+    Ok(_) => (),
     Err(msg) => {
-      println!(
-        "\nProject ({}) has uncommitted changes",
-        name.bold().yellow()
-      );
-      println!("{}", msg);
+      println!("\nProject {}", name.bold().yellow());
+      print!("{}", msg);
+    }
+  };
+  match check_unpublished_changes(path.clone()) {
+    Ok(_) => (),
+    Err(msg) => {
+      println!("\nProject {}", name.bold().yellow());
+      print!("{}", msg);
     }
   };
   Ok(())
@@ -189,6 +200,28 @@ fn check_uncommited_changes(path: String) -> Result<(), Uncommited> {
   let result = from_utf8(&check.stdout).expect("failed to parse output");
   if result.len() > 0 {
     Err(Uncommited(String::from(result)))
+  } else {
+    Ok(())
+  }
+}
+
+fn check_unpublished_changes(path: String) -> Result<(), Unpublished> {
+  let check = Command::new("/bin/git")
+    .args([
+      "log",
+      "--branches",
+      "--not",
+      "--remotes",
+      "--simplify-by-decoration",
+      "--decorate",
+      "--oneline",
+    ])
+    .current_dir(path)
+    .output()
+    .unwrap();
+  let result = from_utf8(&check.stdout).expect("failed to parse output");
+  if result.len() > 0 {
+    Err(Unpublished(String::from(result)))
   } else {
     Ok(())
   }
@@ -248,7 +281,7 @@ fn main() {
         process::exit(1)
       });
       match git_checkouts(absolute_path.clone(), project.name.clone()) {
-        Ok(_) => println!("Checking completed successfully"),
+        Ok(_) => println!("\nChecking completed successfully"),
         Err(_) => {}
       }
     }
