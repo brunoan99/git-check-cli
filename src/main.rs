@@ -171,23 +171,33 @@ impl Display for Unpublished {
     write!(f, "Unpublished commits: \n{}", self.0)
   }
 }
+struct Unuptated(String);
 
-fn git_checkouts(path: String, name: String) -> Result<(), ()> {
+impl Display for Unuptated {
+  fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+    write!(f, "{}", self.0)
+  }
+}
+
+fn git_checkouts(path: String) -> Result<(), Unuptated> {
+  let mut unupdated = String::new();
   match check_uncommited_changes(path.clone()) {
     Ok(_) => (),
     Err(msg) => {
-      println!("\nProject {}", name.bold().yellow());
-      print!("{}", msg);
+      unupdated.push_str(msg.to_string().as_str());
     }
   };
   match check_unpublished_changes(path.clone()) {
     Ok(_) => (),
     Err(msg) => {
-      println!("\nProject {}", name.bold().yellow());
-      print!("{}", msg);
+      unupdated.push_str(msg.to_string().as_str());
     }
   };
-  Ok(())
+  if unupdated.is_empty() {
+    Ok(())
+  } else {
+    Err(Unuptated(unupdated))
+  }
 }
 
 fn check_uncommited_changes(path: String) -> Result<(), Uncommited> {
@@ -272,12 +282,15 @@ fn main() {
           eprintln!("Error getting absolute path: {err}");
           process::exit(1)
         });
-        match git_checkouts(absolute_path.clone(), project.name.clone()) {
+        match git_checkouts(absolute_path.clone()) {
           Ok(_) => println!(
             "\nChecking for ({}) completed successfully",
             project.name.clone().yellow().bold()
           ),
-          Err(_) => {}
+          Err(msg) => {
+            println!("Project {}", project.name.clone().bold().yellow());
+            println!("{msg}");
+          }
         }
       }
     }
@@ -292,9 +305,12 @@ fn main() {
         eprintln!("Error getting absolute path: {}", err);
         process::exit(1)
       });
-      match git_checkouts(absolute_path.clone(), project.name.clone()) {
+      match git_checkouts(absolute_path.clone()) {
         Ok(_) => println!("\nChecking completed successfully"),
-        Err(_) => {}
+        Err(msg) => {
+          println!("Project {}", project.name.clone().bold().yellow());
+          println!("{msg}");
+        }
       }
     }
     cli::Commands::AddPath {} => {
