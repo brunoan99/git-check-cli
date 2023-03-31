@@ -15,20 +15,54 @@ The path in projects list always needs to be absolute, relative paths will not w
 
 **NEVER** switch a $HOME for a plain text in the project file
 
-**Unnecessary Evaluation**
-Isnt need to eval all of the paths in the project-list, the reference is part of the path, than is better to show the user with the path and later evaluate it to an absolute path to do checks
+**"Errors"**
 
-Example:
-  - $HOME/test-dir
-  - $TEST_DIR
-  - other/path/
+```rust
+enum UnupdatedEnum {
+  Empty,
+  Commits(Uncommited),
+  Push(Unpublished),
+  Pull(Unpulled),
+}
+// Err -> [UnupdatedEnum] -> [Empty] means updated
+//                        -> [Commits, Empty] means only commits to update
+//                        -> [Commits, Push, Empty] means commits and push to update
+//                        -> [Commits, Push, Pull, Empty] means commits, push and pull to update
+// Think about Empty necessities
+// Empty can be just []
+// but Empty can be usefull if something will not use a vector
+// with Empty in Enum not necessarily a vector have to use it to end an array or something like it
+```
 
-  if first and second options evaluates to the same thing (it's possible) than the user can be confused with what option choose. Like:
-  - evaluate/to/it
-  - evaluate/to/it
-  - other/path/
+**Display idea**
+- Something like
 
-  an user can simply move the reference and the folder of $TEST_DIR and after it $TEST_DIR and $HOME/test-dir will not be the same path, and removing the unwanted but same path will break this in future.
+```sh
+$ git-check check
+```
 
-  than display like the first list is far better than the second.
+Project **project-name** (Uncommited: n) (Unpublished: n) (Unpushed: n)
+Project **project-name2** up to date
 
+---
+
+```sh
+$ git-check check --verbose
+```
+Project **project-name**
+  - Uncommited Changes:
+     M file A
+    ?? file B
+     D file C
+     A file D
+  - Unpublished Changes:
+    hhhhhhh (HEAD -> branch) commit-msg
+    hhhhhhh (HEAD -> branch) commit-msg
+  - Unpulled Changes:
+    hhhhhhh (remote -> branch) commit-msg
+
+Project **project-name2** up to date
+
+---
+
+**Check git fetch to sync remote repositories**

@@ -156,11 +156,19 @@ fn eval_path_to_absolute(exp: String) -> Result<String, EvalError> {
 
 // git
 
+struct Unuptated(String);
+
+impl Display for Unuptated {
+  fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+    write!(f, "{}", self.0)
+  }
+}
+
 struct Uncommited(String);
 
 impl Display for Uncommited {
   fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-    write!(f, "Uncommited Changes in files: \n{}", self.0)
+    write!(f, "Uncommited Changes: \n{}", self.0)
   }
 }
 
@@ -168,14 +176,15 @@ struct Unpublished(String);
 
 impl Display for Unpublished {
   fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-    write!(f, "Unpublished commits: \n{}", self.0)
+    write!(f, "Unpublished Changes: \n{}", self.0)
   }
 }
-struct Unuptated(String);
 
-impl Display for Unuptated {
+struct Unpulled(String);
+
+impl Display for Unpulled {
   fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-    write!(f, "{}", self.0)
+    write!(f, "Unpulled Changes: \n{}", self.0)
   }
 }
 
@@ -235,6 +244,10 @@ fn check_unpublished_changes(path: String) -> Result<(), Unpublished> {
   } else {
     Ok(())
   }
+}
+
+fn check_unpulled_changes(path: String) -> Result<(), Unpulled> {
+  Ok(())
 }
 
 // main
