@@ -267,7 +267,19 @@ fn main() {
 
   match &options.command {
     cli::Commands::Check => {
-      // projects_file
+      for project in projects_list.0.iter() {
+        let absolute_path = eval_path_to_absolute(project.path.clone()).unwrap_or_else(|err| {
+          eprintln!("Error getting absolute path: {err}");
+          process::exit(1)
+        });
+        match git_checkouts(absolute_path.clone(), project.name.clone()) {
+          Ok(_) => println!(
+            "\nChecking for ({}) completed successfully",
+            project.name.clone().yellow().bold()
+          ),
+          Err(_) => {}
+        }
+      }
     }
     cli::Commands::CheckPath {} => {
       let project = Select::new("chose to check:", projects_list.0)
