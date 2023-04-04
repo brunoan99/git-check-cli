@@ -1,16 +1,13 @@
-#[path = "cli/cli.rs"]
-mod cli;
 use colored::Colorize;
 use inquire::{Confirm, Select, Text};
 use linked_hash_map::LinkedHashMap;
+use mylib::cli;
 use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
 use std::process::{self, Command};
 use std::str::from_utf8;
 use std::{ffi::OsString, fs};
 use yaml_rust::{Yaml, YamlEmitter, YamlLoader};
-
-use clap::Parser;
 
 #[derive(Debug)]
 struct Project {
@@ -246,10 +243,6 @@ fn check_unpublished_changes(path: String) -> Result<(), Unpublished> {
   }
 }
 
-fn check_unpulled_changes(path: String) -> Result<(), Unpulled> {
-  Ok(())
-}
-
 // main
 
 fn setup_project_list() -> (String, ProjectList) {
@@ -282,7 +275,7 @@ fn setup_project_list() -> (String, ProjectList) {
 }
 
 fn main() {
-  let options = cli::Options::parse();
+  let options = cli::get_cli_options();
 
   let (projects_file_path, projects_list) = setup_project_list();
 

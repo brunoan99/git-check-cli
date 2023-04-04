@@ -13,9 +13,13 @@ pub enum Commands {
   /// Check all projects being tracked, and do some computations on project list
   Check,
   /// Check a specific project
-  CheckPath {},
+  CheckPath,
   /// Add a new project to the list of tracked projects
-  AddPath {},
+  AddPath,
   /// Remove a project from the list of tracked projects
-  RemovePath {},
+  RemovePath,
+}
+
+pub fn get_cli_options() -> Options {
+  Options::parse()
 }

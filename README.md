@@ -61,7 +61,7 @@ In this scenario the local branch is up to date in relation to origin1, but has 
 type get_repo_info = fn(Project) -> Repo
 
 struct Repo {
-  path: (String),
+  path: String, // maybe this had to become a Path | PathBuff
   name: String,
   branch: String,
   remotes: String[],
