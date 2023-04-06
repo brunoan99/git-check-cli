@@ -1,10 +1,22 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
+/*
+Config -> RepoInfo -> RepoTrack -> RepoResult
+        | Path | name ...
+                   | the result of the querys
+                                | the result of the process of the querys
+ */
+
+use crate::config;
+
 mod process {
   use std::path::PathBuf;
   use std::process::{Command, Output};
   use std::str;
+
+  // TODO:
+  // improve errors
 
   fn remove_break_line(output: &mut Output) {
     if output.stdout.len() > 0 {
@@ -66,6 +78,18 @@ mod process {
     }
   }
 
+  pub fn get_uncommited_changes(path: &str) -> Vec<String> {
+    todo!()
+  }
+
+  pub fn get_unpushed_commits_by_remote(path: &str, remote: &str) -> Vec<String> {
+    todo!()
+  }
+
+  pub fn get_upulled_commits_by_remote(path: &str, remote: &str) -> Vec<String> {
+    todo!()
+  }
+
   #[cfg(test)]
   mod tests {
     // TODO:
@@ -120,34 +144,53 @@ enum RepoHidratateErrors {
   GitNotFound,
 }
 
-impl Repo {
-  const fn new(path: String, name: String, branch: String, remotes: Vec<String>) -> Self {
-    Self {
-      path,
-      name,
-      branch,
-      remotes,
-    }
-  }
+impl TryFrom<config::Project> for Repo {
+  type Error = RepoHidratateErrors;
 
-  pub fn from_path(path: String, name: String) -> Result<Self, RepoHidratateErrors> {
-    if !process::project_exist(path.as_str()) {
+  fn try_from(value: config::Project) -> Result<Self, Self::Error> {
+    if !process::project_exist(value.path.as_str()) {
       return Err(RepoHidratateErrors::ProjectNotFound);
     }
-    if !process::git_repo_in(path.as_str()) {
+    if !process::git_repo_in(value.path.as_str()) {
       return Err(RepoHidratateErrors::GitNotFound);
     }
-    let branch = process::get_branch(path.as_str());
-    let remotes = process::get_remotes(path.as_str());
-    Ok(Repo::new(path, name, branch, remotes))
+    let branch = process::get_branch(value.path.as_str());
+    let remotes = process::get_remotes(value.path.as_str());
+    Ok(Repo {
+      path: value.path,
+      name: value.name,
+      branch,
+      remotes,
+    })
   }
 }
 
-struct RepoTrack {
+struct RepoQuery {
+  repo: Repo,
+  commits: Vec<String>,
+  push: Vec<String>,
+  pull: Vec<String>,
+}
+
+impl TryFrom<Repo> for RepoQuery {
+  type Error = ();
+
+  fn try_from(value: Repo) -> Result<Self, Self::Error> {
+    todo!()
+  }
+}
+
+struct RepoResult {
   repo: Repo,
   commits: CommitTrack,
   push: Vec<PushTrack>,
   pull: Vec<PullTrack>,
+}
+
+impl From<RepoQuery> for RepoResult {
+  fn from(value: RepoQuery) -> Self {
+    todo!()
+  }
 }
 
 struct Commit {
@@ -156,12 +199,23 @@ struct Commit {
   msg: String,
 }
 
+impl TryFrom<&str> for Commit {
+  type Error = ();
+
+  fn try_from(value: &str) -> Result<Self, Self::Error> {
+    todo!()
+  }
+}
+
 enum CommitTrack {
   Empty,
-  UncommitedChanges {
-    file_changes: Vec<Commit>,
-    changes: u32,
-  },
+  UncommitedChanges { commits: Vec<Commit>, changes: u32 },
+}
+
+impl From<Vec<String>> for CommitTrack {
+  fn from(value: Vec<String>) -> Self {
+    todo!()
+  }
 }
 
 enum PushTrack {
@@ -173,11 +227,25 @@ enum PushTrack {
   },
 }
 
+impl PushTrack {
+  fn from(query: Vec<String>, remote: &str) -> Self {
+    todo!()
+  }
+}
+
 enum PullTrack {
-  Empty,
+  Empty {
+    remote: String,
+  },
   UnpulledChanges {
     remote: String,
     commits: Vec<Commit>, // Array or a Vec containing each line of log unpulled to an remote
     changes: u32, // if in future will contain a total or definitely implement a non verbose version
   },
+}
+
+impl PullTrack {
+  fn from(query: Vec<String>, remote: &str) -> Self {
+    todo!()
+  }
 }
