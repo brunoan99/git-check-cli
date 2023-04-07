@@ -1,0 +1,83 @@
+[
+    Hash(
+        {
+            String(
+                "configs",
+            ): Array(
+                [
+                    Hash(
+                        {
+                            String(
+                                "verbose",
+                            ): Boolean(
+                                false,
+                            ),
+                        },
+                    ),
+                ],
+            ),
+            String(
+                "projects-list",
+            ): Array(
+                [
+                    Hash(
+                        {
+                            String(
+                                "name",
+                            ): String(
+                                "project1",
+                            ),
+                            String(
+                                "path",
+                            ): String(
+                                "$HOME/workspace/rust/process-test",
+                            ),
+                        },
+                    ),
+                    Hash(
+                        {
+                            String(
+                                "name",
+                            ): String(
+                                "project2",
+                            ),
+                            String(
+                                "path",
+                            ): String(
+                                "/home/snape/workspace/rust/git-check-cli",
+                            ),
+                        },
+                    ),
+                    Hash(
+                        {
+                            String(
+                                "name",
+                            ): String(
+                                "test",
+                            ),
+                            String(
+                                "path",
+                            ): String(
+                                "$HOME/test-dir",
+                            ),
+                        },
+                    ),
+                    Hash(
+                        {
+                            String(
+                                "name",
+                            ): String(
+                                "test2",
+                            ),
+                            String(
+                                "path",
+                            ): String(
+                                "$HOME/test-dir2",
+                            ),
+                        },
+                    ),
+                ],
+            ),
+        },
+    ),
+]

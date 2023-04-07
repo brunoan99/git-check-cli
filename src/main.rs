@@ -134,13 +134,13 @@ impl Display for EvalError {
   }
 }
 
-fn eval_path_to_absolute(exp: String) -> Result<String, EvalError> {
-  let path_to_eval = ["/bin/echo", &exp].join(" ");
+fn eval_path_to_absolute(exp: &str) -> Result<String, EvalError> {
+  let path_to_eval = ["/bin/echo", exp].join(" ");
   let mut cmd = Command::new("sh");
   cmd.args(["-c", &path_to_eval]);
   let mut output = match cmd.output() {
     Ok(out) => out,
-    Err(err) => return Err(EvalError(String::from(err.to_string()))),
+    Err(err) => return Err(EvalError(err.to_string())),
   };
   output
     .stdout
@@ -148,7 +148,7 @@ fn eval_path_to_absolute(exp: String) -> Result<String, EvalError> {
   let abs_path = from_utf8(&output.stdout);
   match abs_path {
     Ok(absolute_path) => Ok(String::from(absolute_path)),
-    Err(err) => Err(EvalError(String::from(err.to_string()))),
+    Err(err) => Err(EvalError(err.to_string())),
   }
 }
 
@@ -186,15 +186,15 @@ impl Display for Unpulled {
   }
 }
 
-fn git_checkouts(path: String) -> Result<(), Unuptated> {
+fn git_checkouts(path: &str) -> Result<(), Unuptated> {
   let mut unupdated = String::new();
-  match check_uncommited_changes(path.clone()) {
+  match check_uncommited_changes(path) {
     Ok(_) => (),
     Err(msg) => {
       unupdated.push_str(msg.to_string().as_str());
     }
   };
-  match check_unpublished_changes(path.clone()) {
+  match check_unpublished_changes(path) {
     Ok(_) => (),
     Err(msg) => {
       unupdated.push_str(msg.to_string().as_str());
@@ -207,7 +207,7 @@ fn git_checkouts(path: String) -> Result<(), Unuptated> {
   }
 }
 
-fn check_uncommited_changes(path: String) -> Result<(), Uncommited> {
+fn check_uncommited_changes(path: &str) -> Result<(), Uncommited> {
   let check = Command::new("/bin/git")
     .arg("status")
     .arg("--short")
@@ -215,14 +215,14 @@ fn check_uncommited_changes(path: String) -> Result<(), Uncommited> {
     .output()
     .unwrap();
   let result = from_utf8(&check.stdout).expect("failed to parse output");
-  if result.len() > 0 {
+  if result.is_empty() {
     Err(Uncommited(String::from(result)))
   } else {
     Ok(())
   }
 }
 
-fn check_unpublished_changes(path: String) -> Result<(), Unpublished> {
+fn check_unpublished_changes(path: &str) -> Result<(), Unpublished> {
   let check = Command::new("/bin/git")
     .args([
       "log",
@@ -237,7 +237,7 @@ fn check_unpublished_changes(path: String) -> Result<(), Unpublished> {
     .output()
     .unwrap();
   let result = from_utf8(&check.stdout).expect("failed to parse output");
-  if result.len() > 0 {
+  if result.is_empty() {
     Err(Unpublished(String::from(result)))
   } else {
     Ok(())
@@ -284,12 +284,12 @@ fn main() {
 
   match &options.command {
     cli::Commands::Check => {
-      for project in projects_list.0.iter() {
-        let absolute_path = eval_path_to_absolute(project.path.clone()).unwrap_or_else(|err| {
+      for project in &projects_list.0 {
+        let absolute_path = eval_path_to_absolute(project.path.as_str()).unwrap_or_else(|err| {
           eprintln!("Error getting absolute path: {err}");
           process::exit(1)
         });
-        match git_checkouts(absolute_path.clone()) {
+        match git_checkouts(absolute_path.as_str()) {
           Ok(_) => println!(
             "\nChecking for ({}) completed successfully",
             project.name.clone().yellow().bold()
@@ -308,14 +308,14 @@ fn main() {
           eprintln!("Error selecting project, err: {err}");
           process::exit(1);
         });
-      let absolute_path = eval_path_to_absolute(project.path.clone()).unwrap_or_else(|err| {
-        eprintln!("Error getting absolute path: {}", err);
+      let absolute_path = eval_path_to_absolute(project.path.as_str()).unwrap_or_else(|err| {
+        eprintln!("Error getting absolute path: {err}");
         process::exit(1)
       });
-      match git_checkouts(absolute_path.clone()) {
+      match git_checkouts(absolute_path.as_str()) {
         Ok(_) => println!("\nChecking completed successfully"),
         Err(msg) => {
-          println!("Project {}", project.name.clone().bold().yellow());
+          println!("Project {}", project.name.bold().yellow());
           println!("{msg}");
         }
       }

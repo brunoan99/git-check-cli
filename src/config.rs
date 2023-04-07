@@ -2,38 +2,55 @@
 #![allow(unused_variables)]
 
 use linked_hash_map::LinkedHashMap;
-use std::{
-  fmt::{Display, Formatter},
-  io::Error,
-};
+use std::fmt::{Display, Formatter};
 use yaml_rust::Yaml;
 
-struct Options {
+pub struct Tracker {
   configs: Configs,
-  project_list: Vec<Project>,
+  projects: Vec<Project>,
 }
 
-impl TryFrom<&Yaml> for Options {
+impl TryFrom<&[Yaml]> for Tracker {
   type Error = String;
 
-  fn try_from(value: &Yaml) -> Result<Self, Self::Error> {
+  fn try_from(value: &[Yaml]) -> Result<Self, Self::Error> {
+    let yaml = &value[0];
+    let mut errors = vec![];
+    let configs_yaml = &yaml["configs"];
+    let Ok(configs) = Configs::try_from(configs_yaml) else {
+        return Err("some error occured while loading configs".to_string());
+    };
+    let projects_yaml = &yaml["projects-list"];
+    let projects: Vec<Project> = projects_yaml
+      .as_vec()
+      .unwrap()
+      .iter()
+      .map(Project::try_from)
+      .filter_map(|r| r.map_err(|e| errors.push(e)).ok())
+      .collect();
+    if errors.is_empty() {
+      Ok(Self { configs, projects })
+    } else {
+      Err("some error occurred while loading projects".to_string())
+    }
+  }
+}
+
+impl From<Tracker> for Yaml {
+  fn from(value: Tracker) -> Self {
     todo!()
   }
 }
 
-impl Into<Yaml> for Options {
-  fn into(self) -> Yaml {
-    todo!()
-  }
-}
-
-impl Options {
-  fn add_project(&mut self, project: Project) -> Result<(), Error> {
-    todo!()
+impl Tracker {
+  fn add_project(&mut self, project: Project) {
+    self.projects.insert(self.projects.len(), project);
   }
 
-  fn remove_project(&mut self, name: &str) -> Result<(), Error> {
-    todo!()
+  fn remove_project(&mut self, project: &Project) {
+    self
+      .projects
+      .retain(|p| !(p.name == project.name && p.path == project.path));
   }
 }
 
@@ -50,8 +67,8 @@ impl TryFrom<&Yaml> for Configs {
   }
 }
 
-impl Into<Yaml> for Configs {
-  fn into(self) -> Yaml {
+impl From<Configs> for Yaml {
+  fn from(value: Configs) -> Self {
     todo!()
   }
 }
@@ -77,14 +94,14 @@ impl TryFrom<&Yaml> for Project {
   }
 }
 
-impl Into<Yaml> for Project {
-  fn into(self) -> Yaml {
-    let yaml_name = Yaml::String(self.name.clone());
-    let yaml_path = Yaml::String(self.path.clone());
-    let mut map: LinkedHashMap<Yaml, Yaml> = LinkedHashMap::new();
-    map.insert(Yaml::String(String::from("name")), yaml_name);
-    map.insert(Yaml::String(String::from("path")), yaml_path);
-    Yaml::Hash(map)
+impl From<Project> for Yaml {
+  fn from(val: Project) -> Self {
+    let yaml_name = Self::String(val.name);
+    let yaml_path = Self::String(val.path);
+    let mut map: LinkedHashMap<Self, Self> = LinkedHashMap::new();
+    map.insert(Self::String(String::from("name")), yaml_name);
+    map.insert(Self::String(String::from("path")), yaml_path);
+    Self::Hash(map)
   }
 }
 

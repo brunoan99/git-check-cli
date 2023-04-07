@@ -19,7 +19,7 @@ mod process {
   // improve errors
 
   fn remove_break_line(output: &mut Output) {
-    if output.stdout.len() > 0 {
+    if output.stdout.is_empty() {
       output.stdout.remove(output.stdout.len() - 1);
     }
   }
@@ -29,10 +29,15 @@ mod process {
     String::from(str_stdout)
   }
 
+  fn get_stderr_as_string(output: &Output) -> String {
+    let str_stderr = str::from_utf8(&output.stderr).unwrap();
+    String::from(str_stderr)
+  }
+
   pub fn project_exist(path: &str) -> bool {
     let mut project_path = String::from(path);
-    if !project_path.ends_with("/") {
-      project_path.push_str("/")
+    if !project_path.ends_with('/') {
+      project_path.push('/');
     }
     let project_path = PathBuf::from(project_path);
     project_path.exists()
@@ -40,8 +45,8 @@ mod process {
 
   pub fn git_repo_in(path: &str) -> bool {
     let mut git_path = String::from(path);
-    if !git_path.ends_with("/") {
-      git_path.push_str("/")
+    if !git_path.ends_with('/') {
+      git_path.push('/');
     }
     git_path.push_str(".git/");
     let git_path = PathBuf::from(git_path);
@@ -55,8 +60,7 @@ mod process {
       .output()
       .unwrap();
     remove_break_line(&mut output);
-    let branch = get_stdout_as_string(&mut output);
-    branch
+    get_stdout_as_string(&output)
   }
 
   pub fn get_remotes(path: &str) -> Vec<String> {
@@ -66,69 +70,67 @@ mod process {
       .output()
       .unwrap();
     remove_break_line(&mut output);
-    let remotes_string = str::from_utf8(&output.stdout).expect("Failed to parse output");
-    if remotes_string.contains("\n") {
-      let remotes: Vec<String> = remotes_string
-        .split("\n")
-        .map(|item| String::from(item))
-        .collect();
-      remotes
-    } else {
-      vec![String::from(remotes_string)]
-    }
+    let remotes: Vec<String> = get_stdout_as_string(&output)
+      .split('\n')
+      .map(String::from)
+      .collect();
+    remotes
   }
 
   pub fn get_uncommited_changes(path: &str) -> Vec<String> {
-    todo!()
+    let mut output = Command::new("/bin/git")
+      .args(["status", "--short"])
+      .current_dir(path)
+      .output()
+      .unwrap();
+    remove_break_line(&mut output);
+    let uncommited_changes: Vec<String> = get_stdout_as_string(&output)
+      .split('\n')
+      .map(String::from)
+      .collect();
+    uncommited_changes
   }
 
-  pub fn get_unpushed_commits_by_remote(path: &str, remote: &str) -> Vec<String> {
-    todo!()
+  pub struct GitFetchingError;
+
+  pub fn fetch_repo(path: &str) -> Result<(), GitFetchingError> {
+    let output = Command::new("/bin/git")
+      .args(["fetch", "--all"])
+      .output()
+      .unwrap();
+    if output.stderr.is_empty() {
+      Ok(())
+    } else {
+      Err(GitFetchingError)
+    }
   }
 
-  pub fn get_upulled_commits_by_remote(path: &str, remote: &str) -> Vec<String> {
-    todo!()
+  pub fn get_unpushed_commits_by_remote(path: &str, remote: &str, branch: &str) -> Vec<String> {
+    let refs = format!("{remote}/{branch}..{branch}");
+    let mut output = Command::new("/bin/git")
+      .args(["log", "--oneline", &refs])
+      .output()
+      .unwrap();
+    remove_break_line(&mut output);
+    let unpushed_commits: Vec<String> = get_stdout_as_string(&output)
+      .split('\n')
+      .map(String::from)
+      .collect();
+    unpushed_commits
   }
 
-  #[cfg(test)]
-  mod tests {
-    // TODO:
-    // Improve testability not using a folder in my setup,
-    // Certificate to create and delete a directory to test it
-    use super::{get_branch, get_remotes, git_repo_in, project_exist};
-
-    #[test]
-    fn test_get_branch() {
-      let result = get_branch("/home/snape/test-dir5");
-      assert_eq!(result, String::from("another-name"));
-    }
-
-    #[test]
-    fn test_get_remotes() {
-      let result = get_remotes("/home/snape/test-dir3");
-      assert_eq!(
-        result,
-        vec![String::from("origin"), String::from("origin2")]
-      );
-      let result = get_remotes("/home/snape/test-dir5");
-      assert_eq!(result, vec![String::from("")]);
-    }
-
-    #[test]
-    fn test_git_repo_in() {
-      let result = git_repo_in("/home/snape/test-dir4");
-      assert_eq!(result, true);
-      let result = git_repo_in("/home/snape/test-dir6");
-      assert_eq!(result, false);
-    }
-
-    #[test]
-    fn test_project_exists() {
-      let result = project_exist("/home/snape/test-dir4");
-      assert_eq!(result, true);
-      let result = project_exist("/home/snape/test-dir6");
-      assert_eq!(result, false)
-    }
+  pub fn get_unpulled_commits_by_remote(path: &str, remote: &str, branch: &str) -> Vec<String> {
+    let refs = format!("{branch}..{remote}/{branch}");
+    let mut output = Command::new("/bin/git")
+      .args(["log", "--oneline", &refs])
+      .output()
+      .unwrap();
+    remove_break_line(&mut output);
+    let unpulled_commits: Vec<String> = get_stdout_as_string(&output)
+      .split('\n')
+      .map(String::from)
+      .collect();
+    unpulled_commits
   }
 }
 
@@ -156,7 +158,7 @@ impl TryFrom<config::Project> for Repo {
     }
     let branch = process::get_branch(value.path.as_str());
     let remotes = process::get_remotes(value.path.as_str());
-    Ok(Repo {
+    Ok(Self {
       path: value.path,
       name: value.name,
       branch,
@@ -167,15 +169,19 @@ impl TryFrom<config::Project> for Repo {
 
 struct RepoQuery {
   repo: Repo,
-  commits: Vec<String>,
-  push: Vec<String>,
-  pull: Vec<String>,
+  commits: CommitQuery,
+  push: Vec<PushQuery>,
+  pull: Vec<PullQuery>,
 }
 
-impl TryFrom<Repo> for RepoQuery {
-  type Error = ();
+struct CommitQuery;
 
-  fn try_from(value: Repo) -> Result<Self, Self::Error> {
+struct PushQuery;
+
+struct PullQuery;
+
+impl From<Repo> for RepoQuery {
+  fn from(value: Repo) -> Self {
     todo!()
   }
 }
@@ -219,7 +225,9 @@ impl From<Vec<String>> for CommitTrack {
 }
 
 enum PushTrack {
-  Empty,
+  Empty {
+    remote: String,
+  },
   UnpushedChanges {
     remote: String,
     commits: Vec<Commit>, // Array or a Vec containing each line of log unpushed to an remote

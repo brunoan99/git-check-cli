@@ -1,4 +1,9 @@
+#![allow(dead_code)]
+#![allow(unused_variables)]
+
 use clap::{command, Parser, Subcommand};
+
+use crate::config;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -20,6 +25,12 @@ pub enum Commands {
   RemovePath,
 }
 
+#[must_use]
 pub fn get_cli_options() -> Options {
   Options::parse()
+}
+
+// GET CLI FUNCTIONS TO HERE
+pub fn process_input(option: Commands, configs: config::Tracker) -> Result<(), ()> {
+  Ok(())
 }
