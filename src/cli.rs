@@ -13,7 +13,7 @@ pub struct Options {
   pub command: Commands,
 }
 
-#[derive(Subcommand)]
+#[derive(Subcommand, Clone, Copy)]
 pub enum Commands {
   /// Check all projects being tracked, and do some computations on project list
   Check,
@@ -31,6 +31,6 @@ pub fn get_cli_options() -> Options {
 }
 
 // GET CLI FUNCTIONS TO HERE
-pub fn process_input(option: Commands, configs: config::Tracker) -> Result<(), ()> {
+pub fn process_input(option: Commands, configs: &mut config::Config) -> Result<(), ()> {
   Ok(())
 }

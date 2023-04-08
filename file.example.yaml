@@ -1,0 +1,15 @@
+---
+configs:
+  - verbose: true # or just '- verbose'
+
+projects-list:
+  - name: project
+    path: $HOME/project-dir
+  - name: project2
+    path: $HOME/project-dir2
+  - name: project3
+    path: $HOME/project-dir3
+  - name: project4
+    path: $HOME/project-dir4
+  - name: project5
+    path: $HOME/project-dir5

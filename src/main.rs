@@ -1,110 +1,12 @@
 use colored::Colorize;
 use inquire::{Confirm, Select, Text};
-use linked_hash_map::LinkedHashMap;
-use mylib::cli;
+use mylib::{cli, config};
 use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
 use std::process::{self, Command};
 use std::str::from_utf8;
 use std::{ffi::OsString, fs};
 use yaml_rust::{Yaml, YamlEmitter, YamlLoader};
-
-#[derive(Debug)]
-struct Project {
-  name: String,
-  path: String,
-}
-
-impl Project {
-  const fn new(name: String, path: String) -> Self {
-    Self { name, path }
-  }
-
-  fn from_yaml(yaml: &Yaml) -> Self {
-    let name = String::from(yaml["name"].as_str().unwrap_or_else(|| {
-      eprintln!("Error getting project name");
-      process::exit(1);
-    }));
-    let path = String::from(yaml["path"].as_str().unwrap_or_else(|| {
-      eprintln!("Error getting project path");
-      process::exit(1);
-    }));
-    Self { name, path }
-  }
-
-  fn to_yaml(&self) -> Yaml {
-    let yaml_name = Yaml::String(self.name.clone());
-    let yaml_path = Yaml::String(self.path.clone());
-    let mut map: LinkedHashMap<Yaml, Yaml> = LinkedHashMap::new();
-    map.insert(Yaml::String(String::from("name")), yaml_name);
-    map.insert(Yaml::String(String::from("path")), yaml_path);
-    Yaml::Hash(map)
-  }
-}
-
-impl Display for Project {
-  fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-    write!(f, "Project [name: {}, path: {}]", self.name, self.path)
-  }
-}
-
-impl Clone for Project {
-  fn clone(&self) -> Self {
-    Self {
-      name: self.name.clone(),
-      path: self.path.clone(),
-    }
-  }
-}
-
-#[derive(Debug)]
-struct ProjectList(Vec<Project>);
-
-impl Clone for ProjectList {
-  fn clone(&self) -> Self {
-    Self(self.0.iter().map(Clone::clone).collect())
-  }
-}
-
-impl ProjectList {
-  const fn new(vec: Vec<Project>) -> Self {
-    Self(vec)
-  }
-
-  fn from_yaml_vec(yaml: &[Yaml]) -> Option<Self> {
-    let projects_list = &yaml[0]["projects-list"];
-    projects_list.as_vec().map(|vec_projects| {
-      let vec_paths = vec_projects.iter().map(Project::from_yaml).collect();
-      Self(vec_paths)
-    })
-  }
-
-  fn to_yaml_vec(&self) -> Yaml {
-    let array: Vec<Yaml> = self.0.iter().map(Project::to_yaml).collect();
-    let mut map: LinkedHashMap<Yaml, Yaml> = LinkedHashMap::new();
-    map.insert(
-      Yaml::String(String::from("projects-list")),
-      Yaml::Array(array),
-    );
-    Yaml::Hash(map)
-  }
-
-  fn remove_by_name(&self, name: &str) -> Self {
-    let new_projects_list = self
-      .0
-      .iter()
-      .cloned()
-      .filter(|item| item.name != name)
-      .collect::<Vec<Project>>();
-    Self::new(new_projects_list)
-  }
-
-  fn add_new_project(self, new: Project) -> Self {
-    let mut project_list = self.0;
-    project_list.push(new);
-    Self(project_list)
-  }
-}
 
 // proceess
 
@@ -190,14 +92,14 @@ fn git_checkouts(path: &str) -> Result<(), Unuptated> {
   let mut unupdated = String::new();
   match check_uncommited_changes(path) {
     Ok(_) => (),
-    Err(msg) => {
-      unupdated.push_str(msg.to_string().as_str());
+    Err(Uncommited(msg)) => {
+      unupdated.push_str(&msg);
     }
   };
   match check_unpublished_changes(path) {
     Ok(_) => (),
-    Err(msg) => {
-      unupdated.push_str(msg.to_string().as_str());
+    Err(Unpublished(msg)) => {
+      unupdated.push_str(&msg);
     }
   };
   if unupdated.is_empty() {
@@ -214,7 +116,7 @@ fn check_uncommited_changes(path: &str) -> Result<(), Uncommited> {
     .current_dir(path)
     .output()
     .unwrap();
-  let result = from_utf8(&check.stdout).expect("failed to parse output");
+  let result = from_utf8(&check.stdout).unwrap();
   if result.is_empty() {
     Err(Uncommited(String::from(result)))
   } else {
@@ -236,7 +138,7 @@ fn check_unpublished_changes(path: &str) -> Result<(), Unpublished> {
     .current_dir(path)
     .output()
     .unwrap();
-  let result = from_utf8(&check.stdout).expect("failed to parse output");
+  let result = from_utf8(&check.stdout).unwrap();
   if result.is_empty() {
     Err(Unpublished(String::from(result)))
   } else {
@@ -246,50 +148,50 @@ fn check_unpublished_changes(path: &str) -> Result<(), Unpublished> {
 
 // main
 
-fn setup_project_list() -> (String, ProjectList) {
+fn setup_config() -> (String, config::Config) {
   let home_path = home::home_dir().unwrap_or_else(|| {
     eprintln!("Error finding home directory!");
     process::exit(1);
   });
 
-  let projects_path = path_of_projects_list_file(home_path).unwrap_or_else(|_| {
+  let config_file_path = path_of_projects_list_file(home_path).unwrap_or_else(|_| {
     eprintln!("Error getting projects file path");
     process::exit(1)
   });
 
-  let contents = fs::read_to_string(projects_path.clone()).unwrap_or_else(|err| {
+  let contents = fs::read_to_string(config_file_path.clone()).unwrap_or_else(|err| {
     eprintln!("Error reading projects list file, error: {err}");
     process::exit(1);
   });
 
-  let configs = YamlLoader::load_from_str(&contents).unwrap_or_else(|err| {
+  let configs_yaml = YamlLoader::load_from_str(&contents).unwrap_or_else(|err| {
     eprintln!("Error parsing file, error: {err}");
     process::exit(1);
   });
 
-  let projects_list = ProjectList::from_yaml_vec(&configs).unwrap_or_else(|| {
-    eprintln!("Error parsing yaml to projec list");
+  let configs = config::Config::try_from(configs_yaml).unwrap_or_else(|err| {
+    eprintln!("{err}");
     process::exit(1);
   });
 
-  (projects_path, projects_list)
+  (config_file_path, configs)
 }
 
 fn main() {
   let options = cli::get_cli_options();
 
-  let (projects_file_path, projects_list) = setup_project_list();
+  let (configs_path, mut configs) = setup_config();
 
   println!("Starting git-check-cli");
 
   match &options.command {
     cli::Commands::Check => {
-      for project in &projects_list.0 {
-        let absolute_path = eval_path_to_absolute(project.path.as_str()).unwrap_or_else(|err| {
+      for project in configs.projects {
+        let absolute_path = eval_path_to_absolute(&project.path).unwrap_or_else(|err| {
           eprintln!("Error getting absolute path: {err}");
           process::exit(1)
         });
-        match git_checkouts(absolute_path.as_str()) {
+        match git_checkouts(&absolute_path) {
           Ok(_) => println!(
             "\nChecking for ({}) completed successfully",
             project.name.clone().yellow().bold()
@@ -302,17 +204,17 @@ fn main() {
       }
     }
     cli::Commands::CheckPath {} => {
-      let project = Select::new("chose to check:", projects_list.0)
+      let project = Select::new("chose to check:", configs.projects.clone())
         .prompt()
         .unwrap_or_else(|err| {
           eprintln!("Error selecting project, err: {err}");
           process::exit(1);
         });
-      let absolute_path = eval_path_to_absolute(project.path.as_str()).unwrap_or_else(|err| {
+      let absolute_path = eval_path_to_absolute(&project.path).unwrap_or_else(|err| {
         eprintln!("Error getting absolute path: {err}");
         process::exit(1)
       });
-      match git_checkouts(absolute_path.as_str()) {
+      match git_checkouts(&absolute_path) {
         Ok(_) => println!("\nChecking completed successfully"),
         Err(msg) => {
           println!("Project {}", project.name.bold().yellow());
@@ -329,7 +231,7 @@ fn main() {
         eprintln!("Error in response: {err}");
         process::exit(1);
       });
-      let new_project = Project::new(name, path);
+      let new_project = config::Project::new(name, path);
       println!("{new_project}");
       let confirm = Confirm::new("Confirm to add to projects list")
         .with_default(true)
@@ -341,20 +243,21 @@ fn main() {
       if !confirm {
         success_exit("Project not added");
       }
-      let yaml_projects_list = projects_list.add_new_project(new_project).to_yaml_vec();
+      configs.add_project(new_project);
+      let yaml_projects_list: Yaml = configs.into();
       let mut out_str = String::new();
       let mut emitter = YamlEmitter::new(&mut out_str);
       emitter.dump(&yaml_projects_list).unwrap_or_else(|err| {
         eprintln!("Failed to write yaml projects list in file: {err}");
         process::exit(1);
       });
-      match fs::write(projects_file_path, out_str) {
+      match fs::write(configs_path, out_str) {
         Ok(_) => success_exit("Project added successfully"),
-        Err(err) => error_exit(format!("Failed to sync file, getting error: {err}").as_str()),
+        Err(err) => error_exit(&format!("Failed to sync file, getting error: {err}")),
       }
     }
     cli::Commands::RemovePath {} => {
-      let to_remove = Select::new("chose to remove: ", projects_list.0.clone())
+      let to_remove = Select::new("chose to remove: ", configs.projects.clone())
         .prompt()
         .unwrap_or_else(|_| {
           eprintln!("Error selecting project");
@@ -370,16 +273,15 @@ fn main() {
       if !confirm {
         success_exit("Project not removed");
       }
-      let yaml_projects_list = projects_list
-        .remove_by_name(to_remove.name.as_str())
-        .to_yaml_vec();
+      configs.remove_project(&to_remove);
+      let yaml_projects_list: Yaml = configs.into();
       let mut out_str = String::new();
       let mut emitter = YamlEmitter::new(&mut out_str);
       emitter.dump(&yaml_projects_list).unwrap_or_else(|err| {
         eprintln!("Failed to write yaml projects list in file: {err}");
         process::exit(1);
       });
-      match fs::write(projects_file_path, out_str) {
+      match fs::write(configs_path, out_str) {
         Ok(_) => success_exit("Project removed successfully"),
         Err(err) => {
           eprintln!("failed to sync with file, err: {err}");
