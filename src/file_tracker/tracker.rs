@@ -44,15 +44,15 @@ impl TryFrom<Vec<Yaml>> for Tracker {
 
 impl From<Tracker> for Yaml {
   fn from(value: Tracker) -> Self {
-    let mut map: LinkedHashMap<Yaml, Yaml> = LinkedHashMap::new();
+    let mut map: LinkedHashMap<Self, Self> = LinkedHashMap::new();
 
     map.insert(
       Self::String("configs".into()),
-      Yaml::Array(value.options.iter().cloned().map(Option::into).collect()),
+      Self::Array(value.options.iter().cloned().map(Option::into).collect()),
     );
     map.insert(
       Self::String("projects-list".into()),
-      Yaml::Array(value.projects.iter().cloned().map(Project::into).collect()),
+      Self::Array(value.projects.iter().cloned().map(Project::into).collect()),
     );
 
     Self::Hash(map)

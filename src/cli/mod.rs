@@ -3,7 +3,7 @@
 
 use clap::{command, Parser, Subcommand};
 
-use crate::tracker;
+use crate::file_tracker;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -31,6 +31,6 @@ pub fn get_cli_options() -> Options {
 }
 
 // GET CLI FUNCTIONS TO HERE
-pub fn process_input(option: Commands, configs: &mut tracker::Tracker) -> Result<(), ()> {
+pub fn process_input(option: Commands, configs: &mut file_tracker::Tracker) -> Result<(), ()> {
   Ok(())
 }

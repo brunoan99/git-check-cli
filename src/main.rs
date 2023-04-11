@@ -1,7 +1,7 @@
 use colored::Colorize;
 use inquire::{Confirm, Select, Text};
-use mylib::tracker::Tracker;
-use mylib::{cli, tracker};
+use mylib::file_tracker::Tracker;
+use mylib::{cli, file_tracker};
 use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
 use std::process::{self, Command};
@@ -149,7 +149,7 @@ fn check_unpublished_changes(path: &str) -> Result<(), Unpublished> {
 
 // main
 
-fn setup_config() -> (String, tracker::Tracker) {
+fn setup_config() -> (String, file_tracker::Tracker) {
   let home_path = home::home_dir().unwrap_or_else(|| {
     eprintln!("Error finding home directory!");
     process::exit(1);
@@ -232,7 +232,7 @@ fn main() {
         eprintln!("Error in response: {err}");
         process::exit(1);
       });
-      let new_project = tracker::Project::new(name, path);
+      let new_project = file_tracker::Project::new(name, path);
       println!("{new_project}");
       let confirm = Confirm::new("Confirm to add to projects list")
         .with_default(true)
