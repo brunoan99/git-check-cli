@@ -1,6 +1,7 @@
 use colored::Colorize;
 use inquire::{Confirm, Select, Text};
-use mylib::{cli, config};
+use mylib::tracker::Tracker;
+use mylib::{cli, tracker};
 use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
 use std::process::{self, Command};
@@ -49,7 +50,7 @@ fn eval_path_to_absolute(exp: &str) -> Result<String, EvalError> {
     .resize(output.stdout.len() - 1, output.stdout[0]);
   let abs_path = from_utf8(&output.stdout);
   match abs_path {
-    Ok(absolute_path) => Ok(String::from(absolute_path)),
+    Ok(absolute_path) => Ok(absolute_path.into()),
     Err(err) => Err(EvalError(err.to_string())),
   }
 }
@@ -118,7 +119,7 @@ fn check_uncommited_changes(path: &str) -> Result<(), Uncommited> {
     .unwrap();
   let result = from_utf8(&check.stdout).unwrap();
   if result.is_empty() {
-    Err(Uncommited(String::from(result)))
+    Err(Uncommited(result.into()))
   } else {
     Ok(())
   }
@@ -140,7 +141,7 @@ fn check_unpublished_changes(path: &str) -> Result<(), Unpublished> {
     .unwrap();
   let result = from_utf8(&check.stdout).unwrap();
   if result.is_empty() {
-    Err(Unpublished(String::from(result)))
+    Err(Unpublished(result.into()))
   } else {
     Ok(())
   }
@@ -148,18 +149,18 @@ fn check_unpublished_changes(path: &str) -> Result<(), Unpublished> {
 
 // main
 
-fn setup_config() -> (String, config::Config) {
+fn setup_config() -> (String, tracker::Tracker) {
   let home_path = home::home_dir().unwrap_or_else(|| {
     eprintln!("Error finding home directory!");
     process::exit(1);
   });
 
-  let config_file_path = path_of_projects_list_file(home_path).unwrap_or_else(|_| {
+  let config_path = path_of_projects_list_file(home_path).unwrap_or_else(|_| {
     eprintln!("Error getting projects file path");
     process::exit(1)
   });
 
-  let contents = fs::read_to_string(config_file_path.clone()).unwrap_or_else(|err| {
+  let contents = fs::read_to_string(config_path.clone()).unwrap_or_else(|err| {
     eprintln!("Error reading projects list file, error: {err}");
     process::exit(1);
   });
@@ -169,24 +170,24 @@ fn setup_config() -> (String, config::Config) {
     process::exit(1);
   });
 
-  let configs = config::Config::try_from(configs_yaml).unwrap_or_else(|err| {
+  let tracker = Tracker::try_from(configs_yaml).unwrap_or_else(|err| {
     eprintln!("{err}");
     process::exit(1);
   });
 
-  (config_file_path, configs)
+  (config_path, tracker)
 }
 
 fn main() {
   let options = cli::get_cli_options();
 
-  let (configs_path, mut configs) = setup_config();
+  let (configs_path, mut tracker) = setup_config();
 
   println!("Starting git-check-cli");
 
   match &options.command {
     cli::Commands::Check => {
-      for project in configs.projects {
+      for project in tracker.projects {
         let absolute_path = eval_path_to_absolute(&project.path).unwrap_or_else(|err| {
           eprintln!("Error getting absolute path: {err}");
           process::exit(1)
@@ -204,7 +205,7 @@ fn main() {
       }
     }
     cli::Commands::CheckPath {} => {
-      let project = Select::new("chose to check:", configs.projects.clone())
+      let project = Select::new("chose to check:", tracker.projects.clone())
         .prompt()
         .unwrap_or_else(|err| {
           eprintln!("Error selecting project, err: {err}");
@@ -231,7 +232,7 @@ fn main() {
         eprintln!("Error in response: {err}");
         process::exit(1);
       });
-      let new_project = config::Project::new(name, path);
+      let new_project = tracker::Project::new(name, path);
       println!("{new_project}");
       let confirm = Confirm::new("Confirm to add to projects list")
         .with_default(true)
@@ -243,8 +244,8 @@ fn main() {
       if !confirm {
         success_exit("Project not added");
       }
-      configs.add_project(new_project);
-      let yaml_projects_list: Yaml = configs.into();
+      tracker.add_project(new_project);
+      let yaml_projects_list: Yaml = tracker.into();
       let mut out_str = String::new();
       let mut emitter = YamlEmitter::new(&mut out_str);
       emitter.dump(&yaml_projects_list).unwrap_or_else(|err| {
@@ -257,7 +258,7 @@ fn main() {
       }
     }
     cli::Commands::RemovePath {} => {
-      let to_remove = Select::new("chose to remove: ", configs.projects.clone())
+      let to_remove = Select::new("chose to remove: ", tracker.projects.clone())
         .prompt()
         .unwrap_or_else(|_| {
           eprintln!("Error selecting project");
@@ -273,8 +274,8 @@ fn main() {
       if !confirm {
         success_exit("Project not removed");
       }
-      configs.remove_project(&to_remove);
-      let yaml_projects_list: Yaml = configs.into();
+      tracker.remove_project(&to_remove);
+      let yaml_projects_list: Yaml = tracker.into();
       let mut out_str = String::new();
       let mut emitter = YamlEmitter::new(&mut out_str);
       emitter.dump(&yaml_projects_list).unwrap_or_else(|err| {
