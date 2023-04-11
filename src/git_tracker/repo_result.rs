@@ -1,4 +1,7 @@
-use super::{repo_info::RepoInfo, repo_query::RepoQuery};
+use super::{
+  repo_info::RepoInfo,
+  repo_query::{CommitQuery, PullQuery, PushQuery, RepoQuery},
+};
 
 pub struct RepoResult {
   pub repo: RepoInfo,
@@ -9,32 +12,56 @@ pub struct RepoResult {
 
 impl From<RepoQuery> for RepoResult {
   fn from(value: RepoQuery) -> Self {
-    todo!()
-  }
-}
-
-pub struct Commit {
-  pub hash: String,
-  pub branch: String,
-  pub msg: String,
-}
-
-impl TryFrom<&str> for Commit {
-  type Error = ();
-
-  fn try_from(value: &str) -> Result<Self, Self::Error> {
-    todo!()
+    Self {
+      repo: value.repo,
+      commits: CommitTrack::from(value.commits),
+      push: vec![PushTrack::Empty { remote: "".into() }],
+      pull: vec![PullTrack::Empty { remote: "".into() }],
+    }
   }
 }
 
 pub enum CommitTrack {
   Empty,
-  UncommitedChanges { commits: Vec<Commit>, changes: u32 },
+  UncommitedChanges {
+    commits: Vec<FileChange>,
+    changes: u32,
+  },
 }
 
-impl From<Vec<String>> for CommitTrack {
-  fn from(value: Vec<String>) -> Self {
-    todo!()
+impl From<CommitQuery> for CommitTrack {
+  fn from(value: CommitQuery) -> Self {
+    if value.query.is_empty() {
+      CommitTrack::Empty
+    } else {
+      CommitTrack::UncommitedChanges {
+        commits: value
+          .query
+          .iter()
+          .map(String::as_str)
+          .map(FileChange::from)
+          .collect(),
+        changes: value.query.len() as u32,
+      }
+    }
+  }
+}
+
+pub struct FileChange {
+  pub path: String,
+  pub tracked: bool,
+  pub change: String,
+}
+
+impl From<&str> for FileChange {
+  fn from(value: &str) -> Self {
+    let tracked = !(value.starts_with(' ') || value.starts_with('?'));
+    let change = value.split_whitespace().next().unwrap().into();
+    Self {
+      path: value.split_whitespace().last().unwrap().into(),
+      tracked,
+      change,
+    }
   }
 }
 
@@ -49,9 +76,24 @@ pub enum PushTrack {
   },
 }
 
-impl PushTrack {
-  fn from(query: Vec<String>, remote: &str) -> Self {
-    todo!()
+impl From<PushQuery> for PushTrack {
+  fn from(value: PushQuery) -> Self {
+    if value.query.is_empty() {
+      Self::Empty {
+        remote: value.remote,
+      }
+    } else {
+      Self::UnpushedChanges {
+        remote: value.remote,
+        commits: value
+          .query
+          .iter()
+          .map(String::as_str)
+          .map(Commit::from)
+          .collect(),
+        changes: value.query.len() as u32,
+      }
+    }
   }
 }
 
@@ -66,8 +108,38 @@ pub enum PullTrack {
   },
 }
 
-impl PullTrack {
-  fn from(query: Vec<String>, remote: &str) -> Self {
-    todo!()
+impl From<PullQuery> for PullTrack {
+  fn from(value: PullQuery) -> Self {
+    if value.query.is_empty() {
+      PullTrack::Empty {
+        remote: value.remote,
+      }
+    } else {
+      PullTrack::UnpulledChanges {
+        remote: value.remote,
+        commits: value
+          .query
+          .iter()
+          .map(String::as_str)
+          .map(Commit::from)
+          .collect(),
+        changes: value.query.len() as u32,
+      }
+    }
+  }
+}
+
+pub struct Commit {
+  pub hash: String,
+  pub msg: String,
+}
+
+impl From<&str> for Commit {
+  fn from(value: &str) -> Self {
+    let (hash, msg) = value.split_once(' ').unwrap();
+    Self {
+      hash: hash.into(),
+      msg: msg.into(),
+    }
   }
 }

@@ -27,11 +27,7 @@ impl TryFrom<RepoInfo> for RepoQuery {
   fn try_from(value: RepoInfo) -> Result<Self, Self::Error> {
     let path = value.path.as_str();
     let branch = value.branch.as_str();
-    let remotes: Vec<&str> = value
-      .remotes
-      .iter()
-      .map(|remotes| remotes.as_str())
-      .collect();
+    let remotes: Vec<&str> = value.remotes.iter().map(String::as_str).collect();
 
     process::fetch_repo(path)?;
 

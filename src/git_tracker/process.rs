@@ -64,20 +64,6 @@ pub fn get_remotes(path: &str) -> Vec<String> {
   remotes
 }
 
-pub fn get_uncommited_changes(path: &str) -> Vec<String> {
-  let mut output = Command::new("/bin/git")
-    .args(["status", "--short"])
-    .current_dir(path)
-    .output()
-    .unwrap();
-  remove_break_line(&mut output);
-  let uncommited_changes: Vec<String> = get_stdout_as_string(&output)
-    .split('\n')
-    .map(String::from)
-    .collect();
-  uncommited_changes
-}
-
 pub struct GitFetchingError;
 
 pub fn fetch_repo(path: &str) -> Result<(), GitFetchingError> {
@@ -93,10 +79,29 @@ pub fn fetch_repo(path: &str) -> Result<(), GitFetchingError> {
   }
 }
 
+pub fn get_uncommited_changes(path: &str) -> Vec<String> {
+  let mut output = Command::new("/bin/git")
+    .args(["status", "--short"])
+    .current_dir(path)
+    .output()
+    .unwrap();
+  remove_break_line(&mut output);
+  let uncommited_changes: Vec<String> = get_stdout_as_string(&output)
+    .split('\n')
+    .map(String::from)
+    .collect();
+  uncommited_changes
+}
+
 pub fn get_unpushed_commits_by_remote(path: &str, remote: &str, branch: &str) -> Vec<String> {
   let refs = format!("{remote}/{branch}..{branch}");
   let mut output = Command::new("/bin/git")
-    .args(["log", "--oneline", &refs])
+    .args([
+      "log",
+      &refs,
+      "--decorate-refs-exclude=refs/tags",
+      "--pretty=\"format:%h %s\"",
+    ])
     .current_dir(path)
     .output()
     .unwrap();
@@ -111,7 +116,12 @@ pub fn get_unpushed_commits_by_remote(path: &str, remote: &str, branch: &str) ->
 pub fn get_unpulled_commits_by_remote(path: &str, remote: &str, branch: &str) -> Vec<String> {
   let refs = format!("{branch}..{remote}/{branch}");
   let mut output = Command::new("/bin/git")
-    .args(["log", "--oneline", &refs])
+    .args([
+      "log",
+      &refs,
+      "--decorate-refs-exclude=refs/tags",
+      "--pretty=\"format:%h %s\"",
+    ])
     .current_dir(path)
     .output()
     .unwrap();

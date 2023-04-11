@@ -1,5 +1,5 @@
 use super::process;
-use crate::tracker;
+use crate::file_tracker;
 
 #[derive(Clone)]
 pub struct RepoInfo {
@@ -14,10 +14,10 @@ pub enum RepoHidratateErrors {
   GitNotFound,
 }
 
-impl TryFrom<tracker::Project> for RepoInfo {
+impl TryFrom<file_tracker::Project> for RepoInfo {
   type Error = RepoHidratateErrors;
 
-  fn try_from(value: tracker::Project) -> Result<Self, Self::Error> {
+  fn try_from(value: file_tracker::Project) -> Result<Self, Self::Error> {
     if !process::project_exist(value.path.as_str()) {
       return Err(RepoHidratateErrors::ProjectNotFound);
     }
