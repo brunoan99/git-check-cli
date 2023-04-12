@@ -1,7 +1,12 @@
-mod process;
+pub(super) mod process;
 mod repo_info;
 mod repo_query;
 mod repo_result;
+mod result;
+pub use repo_info::RepoHidratateErrors;
 pub use repo_info::RepoInfo;
+pub use repo_query::GitFetchingError;
 pub use repo_query::RepoQuery;
 pub use repo_result::RepoResult;
+pub use result::map_project_to_result;
+pub use result::GitTrackerResult;

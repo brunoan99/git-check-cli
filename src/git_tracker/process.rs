@@ -6,7 +6,7 @@ use std::str;
 // improve errors
 
 fn remove_break_line(output: &mut Output) {
-  if output.stdout.is_empty() {
+  if output.stdout.ends_with(&[10]) && !output.stdout.is_empty() {
     output.stdout.remove(output.stdout.len() - 1);
   }
 }
@@ -16,7 +16,7 @@ fn get_stdout_as_string(output: &Output) -> String {
   str_stdout.into()
 }
 
-fn get_stderr_as_string(output: &Output) -> String {
+fn _get_stderr_as_string(output: &Output) -> String {
   let str_stderr = str::from_utf8(&output.stderr).unwrap();
   str_stderr.into()
 }
@@ -40,6 +40,21 @@ pub fn git_repo_in(path: &str) -> bool {
   git_path.exists()
 }
 
+pub fn get_absolute_path(exp: &str) -> String {
+  if exp.contains('$') {
+    let exp_to_eval = format!("/bin/echo {}", exp);
+    let mut output = Command::new("sh")
+      .args(["-c", &exp_to_eval])
+      .output()
+      .unwrap();
+    remove_break_line(&mut output);
+    let path = str::from_utf8(&output.stdout).unwrap();
+    path.into()
+  } else {
+    exp.into()
+  }
+}
+
 pub fn get_branch(path: &str) -> String {
   let mut output = Command::new("/bin/git")
     .args(["branch", "--show-current"])
@@ -60,6 +75,7 @@ pub fn get_remotes(path: &str) -> Vec<String> {
   let remotes: Vec<String> = get_stdout_as_string(&output)
     .split('\n')
     .map(String::from)
+    .filter(|s| !str::is_empty(s))
     .collect();
   remotes
 }
@@ -86,11 +102,11 @@ pub fn get_uncommited_changes(path: &str) -> Vec<String> {
     .output()
     .unwrap();
   remove_break_line(&mut output);
-  let uncommited_changes: Vec<String> = get_stdout_as_string(&output)
+  get_stdout_as_string(&output)
     .split('\n')
     .map(String::from)
-    .collect();
-  uncommited_changes
+    .filter(|s| !str::is_empty(s))
+    .collect()
 }
 
 pub fn get_unpushed_commits_by_remote(path: &str, remote: &str, branch: &str) -> Vec<String> {
@@ -100,17 +116,17 @@ pub fn get_unpushed_commits_by_remote(path: &str, remote: &str, branch: &str) ->
       "log",
       &refs,
       "--decorate-refs-exclude=refs/tags",
-      "--pretty=\"format:%h %s\"",
+      "--pretty=%h %s",
     ])
     .current_dir(path)
     .output()
     .unwrap();
   remove_break_line(&mut output);
-  let unpushed_commits: Vec<String> = get_stdout_as_string(&output)
+  get_stdout_as_string(&output)
     .split('\n')
     .map(String::from)
-    .collect();
-  unpushed_commits
+    .filter(|s| !str::is_empty(s))
+    .collect()
 }
 
 pub fn get_unpulled_commits_by_remote(path: &str, remote: &str, branch: &str) -> Vec<String> {
@@ -126,9 +142,9 @@ pub fn get_unpulled_commits_by_remote(path: &str, remote: &str, branch: &str) ->
     .output()
     .unwrap();
   remove_break_line(&mut output);
-  let unpulled_commits: Vec<String> = get_stdout_as_string(&output)
+  get_stdout_as_string(&output)
     .split('\n')
     .map(String::from)
-    .collect();
-  unpulled_commits
+    .filter(|s| !str::is_empty(s))
+    .collect()
 }
