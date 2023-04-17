@@ -42,7 +42,7 @@ pub fn git_repo_in(path: &str) -> bool {
 
 pub fn get_absolute_path(exp: &str) -> String {
   if exp.contains('$') {
-    let exp_to_eval = format!("/bin/echo {}", exp);
+    let exp_to_eval = format!("/bin/echo {exp}");
     let mut output = Command::new("sh")
       .args(["-c", &exp_to_eval])
       .output()
@@ -136,7 +136,7 @@ pub fn get_unpulled_commits_by_remote(path: &str, remote: &str, branch: &str) ->
       "log",
       &refs,
       "--decorate-refs-exclude=refs/tags",
-      "--pretty=\"format:%h %s\"",
+      "--pretty=%h %s",
     ])
     .current_dir(path)
     .output()

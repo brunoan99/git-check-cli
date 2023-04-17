@@ -10,7 +10,6 @@ pub struct RepoInfo {
 }
 
 pub enum RepoHidratateErrors {
-  PathNotEvaluated,
   ProjectNotFound,
   GitNotFound,
 }

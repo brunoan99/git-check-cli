@@ -1,6 +1,7 @@
+use colored::Colorize;
 use inquire::{Confirm, Select, Text};
 use mylib::file_tracker::Tracker;
-use mylib::{cli, file_tracker, git_tracker};
+use mylib::{cli, file_tracker, git_tracker, ShortDisplay, VerboseDisplay};
 use std::path::PathBuf;
 use std::process;
 use std::{ffi::OsString, fs};
@@ -51,10 +52,19 @@ fn main() {
 
   let (configs_path, mut tracker) = setup_config();
 
-  println!("Starting git-check-cli");
+  println!("{}", "Starting git-check-cli".bold());
 
   match &options.command {
-    cli::Commands::Check => for _project in tracker.projects {},
+    cli::Commands::Check => {
+      let git_results: Vec<VerboseDisplay> = tracker
+        .projects
+        .iter()
+        .map(git_tracker::map_result_to_verbose_display)
+        .collect();
+      for result in git_results {
+        println!("{result}");
+      }
+    }
     cli::Commands::CheckPath => {
       let project = Select::new("chose to check:", tracker.projects.clone())
         .prompt()
@@ -62,8 +72,8 @@ fn main() {
           eprintln!("Error selecting project, err: {err}");
           process::exit(1);
         });
-      let git_result = git_tracker::map_project_to_result(&project);
-      println!("{}", git_result.0)
+      let git_result = git_tracker::map_result_to_verbose_display(&project);
+      println!("{git_result}");
     }
     cli::Commands::AddPath => {
       let name = Text::new("Project name:").prompt().unwrap_or_else(|err| {
