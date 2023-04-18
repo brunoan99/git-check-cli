@@ -2,44 +2,48 @@ use linked_hash_map::LinkedHashMap;
 use yaml_rust::Yaml;
 
 #[derive(Debug, Clone)]
-pub enum Option {
-  BadOption(Yaml),
-  Verbose(bool), // ...
+pub struct OptionSet {
+  pub bad_options: Vec<Yaml>,
+  pub verbose: bool,
 }
 
-impl From<&Yaml> for Option {
+impl From<&Yaml> for OptionSet {
   fn from(value: &Yaml) -> Self {
-    match value {
-      Yaml::Hash(hash) => {
-        let Some(Yaml::String(key)) = hash.keys().next() else {
-          return Self::BadOption(value.clone());
-        };
-        match key.as_str() {
-          "verbose" => {
-            let Some(Yaml::Boolean(value)) = hash.values().next() else {
-              return Self::BadOption(value.clone());
-            };
-            Self::Verbose(value.to_owned())
+    let mut bad_options = vec![];
+    let mut verbose = false;
+    for config in value.as_vec().unwrap().iter() {
+      match config {
+        Yaml::Hash(hash) => {
+          let key_opt = hash.keys().next();
+          let value_opt = hash.values().next();
+          match (key_opt, value_opt) {
+            (Some(Yaml::String(key)), Some(Yaml::Boolean(value))) => match key.as_str() {
+              "verbose" => {
+                verbose = value.to_owned();
+              }
+              _ => bad_options.push(config.to_owned()),
+            },
+            _ => bad_options.push(config.to_owned()),
           }
-          _ => Self::BadOption(value.clone()),
         }
+        _ => bad_options.push(config.to_owned()),
       }
-      _ => Self::BadOption(value.clone()),
+    }
+    Self {
+      bad_options,
+      verbose,
     }
   }
 }
 
-impl From<Option> for Yaml {
-  fn from(value: Option) -> Self {
-    match value {
-      Option::Verbose(value) => {
-        let key = Self::String("verbose".into());
-        let value = Self::Boolean(value);
-        let mut map: LinkedHashMap<Self, Self> = LinkedHashMap::new();
-        map.insert(key, value);
-        Self::Hash(map)
-      }
-      Option::BadOption(value) => value, // needed to not remove an bad option input from the original file when updating projects
-    }
+impl From<OptionSet> for Yaml {
+  fn from(value: OptionSet) -> Self {
+    let mut config_array: Vec<Yaml> = value.bad_options;
+
+    let mut verbose_map: LinkedHashMap<Self, Self> = LinkedHashMap::new();
+    verbose_map.insert(Self::String("verbose".into()), Self::Boolean(value.verbose));
+    config_array.push(Self::Hash(verbose_map));
+
+    Self::Array(config_array)
   }
 }

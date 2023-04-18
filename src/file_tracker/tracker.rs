@@ -1,4 +1,4 @@
-use super::Option;
+use super::options::OptionSet;
 use super::Project;
 
 use linked_hash_map::LinkedHashMap;
@@ -6,7 +6,7 @@ use yaml_rust::Yaml;
 
 #[derive(Debug, Clone)]
 pub struct Tracker {
-  pub options: Vec<Option>,
+  pub options: OptionSet,
   pub projects: Vec<Project>,
 }
 
@@ -17,12 +17,7 @@ impl TryFrom<Vec<Yaml>> for Tracker {
     let yaml = &value[0];
     let mut errors = vec![];
     let configs_yaml = &yaml["configs"];
-    let configs: Vec<Option> = configs_yaml
-      .as_vec()
-      .unwrap()
-      .iter()
-      .map(Option::from)
-      .collect();
+    let configs: OptionSet = configs_yaml.into();
     let projects_yaml = &yaml["projects-list"];
     let projects: Vec<Project> = projects_yaml
       .as_vec()
@@ -46,10 +41,7 @@ impl From<Tracker> for Yaml {
   fn from(value: Tracker) -> Self {
     let mut map: LinkedHashMap<Self, Self> = LinkedHashMap::new();
 
-    map.insert(
-      Self::String("configs".into()),
-      Self::Array(value.options.iter().cloned().map(Option::into).collect()),
-    );
+    map.insert(Self::String("configs".into()), value.options.into());
     map.insert(
       Self::String("projects-list".into()),
       Self::Array(value.projects.iter().cloned().map(Project::into).collect()),
