@@ -82,7 +82,7 @@ impl From<RemoteQuery> for RemoteTrack {
         remote_queries
           .iter()
           .cloned()
-          .map(|item| RemoteResult::from(item))
+          .map(RemoteResult::from)
           .collect(),
       ),
     }
