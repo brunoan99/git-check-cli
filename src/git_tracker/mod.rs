@@ -2,15 +2,9 @@ pub(super) mod process;
 mod repo_info;
 mod repo_query;
 mod repo_result;
-mod short_result;
-mod verbose_result;
-pub use repo_info::RepoHidratateErrors;
-pub use repo_info::RepoInfo;
-pub use repo_query::GitFetchingError;
-pub use repo_query::RepoQuery;
-pub use repo_result::map_project_to_result;
-pub use repo_result::RepoResult;
-pub use short_result::map_result_to_short_display;
-pub use short_result::ShortDisplay;
-pub use verbose_result::map_result_to_verbose_display;
-pub use verbose_result::VerboseDisplay;
+pub use repo_info::{RepoHidratateErrors, RepoInfo};
+pub use repo_query::{GitFetchingError, RepoQuery};
+pub use repo_result::{
+  map_project_to_result, CommitTrack, PullChanges, PushChanges, RemoteTrack, RepoResult,
+  ResultErrors,
+};

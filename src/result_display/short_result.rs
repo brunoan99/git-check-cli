@@ -1,8 +1,8 @@
-use super::repo_result::{
+use crate::{git_tracker, Project, RepoResult};
+use colored::Colorize;
+use git_tracker::{
   map_project_to_result, CommitTrack, PullChanges, PushChanges, RemoteTrack, ResultErrors,
 };
-use crate::{Project, RepoResult};
-use colored::Colorize;
 
 pub struct ShortDisplay(pub String);
 
@@ -26,7 +26,7 @@ impl From<String> for ShortDisplay {
 
 impl From<&RepoResult> for ShortDisplay {
   fn from(value: &RepoResult) -> Self {
-    let repo_name = value.repo.name.as_str().bold();
+    let repo_name = value.repo.name.as_str().yellow().bold();
     let commit_str = match &value.commits {
       CommitTrack::Empty => format!("[ local -> {} ]", "up to date".to_string().green()),
       CommitTrack::UncommitedChanges {
@@ -77,19 +77,19 @@ pub fn map_result_to_short_display(project: &Project) -> ShortDisplay {
     Ok(repo_result) => ShortDisplay::from(&repo_result),
     Err(ResultErrors::ProjectNotFound) => format!(
       "{} [ {} ]",
-      project.name,
+      project.name.yellow().bold(),
       "Folder was found in specified path".red().bold()
     )
     .into(),
     Err(ResultErrors::GitNotFound) => format!(
       "{} [ {} ]",
-      project.name,
+      project.name.yellow().bold(),
       "Git Repository was found in specified path".red().bold()
     )
     .into(),
     Err(ResultErrors::GitFetchingError) => format!(
       "{} [ {} ]",
-      project.name,
+      project.name.yellow().bold(),
       "Fetching error into git remotes".red()
     )
     .into(),

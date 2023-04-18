@@ -1,8 +1,9 @@
 use colored::Colorize;
 
-use crate::{map_project_to_result, Project, RepoResult};
-
-use super::repo_result::{CommitTrack, PullChanges, PushChanges, RemoteTrack, ResultErrors};
+use crate::{
+  map_project_to_result, process, CommitTrack, Project, PullChanges, PushChanges, RemoteTrack,
+  RepoResult, ResultErrors,
+};
 
 pub struct VerboseDisplay(pub String);
 
@@ -26,7 +27,7 @@ impl From<String> for VerboseDisplay {
 
 impl From<&RepoResult> for VerboseDisplay {
   fn from(value: &RepoResult) -> Self {
-    let repo_name = value.repo.name.as_str().bold();
+    let repo_name = value.repo.name.as_str().yellow().bold();
     let repo_path = value.repo.path.as_str().bold();
     let commit_str = match &value.commits {
       CommitTrack::Empty => format!("  Local changes: {}", "OK".green().bold()),
@@ -35,11 +36,13 @@ impl From<&RepoResult> for VerboseDisplay {
         let commits_str: Vec<String> = commits
           .iter()
           .map(|item| {
-            if item.tracked {
-              format!("    - {} {}", item.change.green(), item.path)
+            let line_start = "    - ";
+            let changed = if item.tracked {
+              item.change.green()
             } else {
-              format!("    - {} {}", item.change.red(), item.path)
-            }
+              item.change.red()
+            };
+            format!("{line_start}{} {}", changed, item.path)
           })
           .collect();
         text.push_str(commits_str.join("\n").as_str());
@@ -53,23 +56,34 @@ impl From<&RepoResult> for VerboseDisplay {
         let string_vec: Vec<String> = remotes_vec
           .iter()
           .map(|item| {
+            let line_title_start = "\n    ";
+            let line_commit_start = "\n      - ";
             let mut text = format!("  {} changes:", item.remote);
             let mut has_changes = false;
             if let PushChanges::Diff { commits, changes } = &item.push {
               has_changes = true;
               text.push_str(&format!(
-                "\n    [ To push: {} ]",
+                "{line_title_start}[ To push: {} ]",
                 changes.to_string().bold()
               ));
               for commit in commits.iter() {
-                text.push_str(&format!("\n      - {} {}", commit.hash, commit.msg))
+                text.push_str(&format!(
+                  "{line_commit_start}{} {}",
+                  commit.hash, commit.msg
+                ))
               }
             }
             if let PullChanges::Diff { commits, changes } = &item.pull {
               has_changes = true;
-              text.push_str(&format!("\n    [ To pull {} ]", changes.to_string().bold()));
+              text.push_str(&format!(
+                "{line_title_start}[ To pull {} ]",
+                changes.to_string().bold()
+              ));
               for commit in commits.iter() {
-                text.push_str(&format!("\n      - {} {}", commit.hash, commit.msg))
+                text.push_str(&format!(
+                  "{line_commit_start}{} {}",
+                  commit.hash, commit.msg
+                ))
               }
             }
             if !has_changes {
@@ -83,7 +97,7 @@ impl From<&RepoResult> for VerboseDisplay {
     };
 
     Self(format!(
-      "{} - {}\n{}\n{}",
+      "{} - {}\n{}\n{}\n",
       repo_name, repo_path, commit_str, remotes_str
     ))
   }
@@ -93,25 +107,25 @@ pub fn map_result_to_verbose_display(project: &Project) -> VerboseDisplay {
   match map_project_to_result(project) {
     Ok(repo_result) => VerboseDisplay::from(&repo_result),
     Err(ResultErrors::ProjectNotFound) => format!(
-      "{} - {}\n  {}: {}",
-      project.name,
-      project.path,
+      "{} - {}\n  {}: {}\n",
+      project.name.yellow().bold(),
+      process::get_absolute_path(&project.path).bold(),
       "Error".bold(),
       "Fetching error into git remotes".red()
     )
     .into(),
     Err(ResultErrors::GitNotFound) => format!(
-      "{} - {}\n  {}: {}",
-      project.name,
-      project.path,
+      "{} - {}\n  {}: {}\n",
+      project.name.yellow().bold(),
+      process::get_absolute_path(&project.path).bold(),
       "Error".bold(),
       "Git Repository was found in specified path".red()
     )
     .into(),
     Err(ResultErrors::GitFetchingError) => format!(
-      "{} - {}\n  {}: {}",
-      project.name,
-      project.path,
+      "{} - {}\n  {}: {}\n",
+      project.name.yellow().bold(),
+      process::get_absolute_path(&project.path).bold(),
       "Error".bold(),
       "Fetching error into git remotes".red()
     )

@@ -7,7 +7,7 @@ use clap::{command, Parser, Subcommand};
 use inquire::{Confirm, Select, Text};
 use yaml_rust::{Yaml, YamlEmitter};
 
-use crate::{file_tracker, git_tracker, Tracker, VerboseDisplay};
+use crate::{file_tracker, map_result_to_short_display, ShortDisplay, Tracker};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -39,10 +39,10 @@ pub fn run_cli(tracker: &mut Tracker, config_path: String) {
 
   match &options.command {
     Commands::Check => {
-      let git_results: Vec<VerboseDisplay> = tracker
+      let git_results: Vec<ShortDisplay> = tracker
         .projects
         .iter()
-        .map(git_tracker::map_result_to_verbose_display)
+        .map(map_result_to_short_display)
         .collect();
       for result in git_results {
         println!("{result}");
@@ -55,7 +55,7 @@ pub fn run_cli(tracker: &mut Tracker, config_path: String) {
           eprintln!("Error selecting project, err: {err}");
           process::exit(1);
         });
-      let git_result = git_tracker::map_result_to_verbose_display(&project);
+      let git_result = map_result_to_short_display(&project);
       println!("{git_result}");
     }
     Commands::AddPath => {
