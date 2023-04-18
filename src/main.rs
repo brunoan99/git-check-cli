@@ -1,4 +1,3 @@
-use colored::Colorize;
 use mylib::file_tracker::Tracker;
 use mylib::{cli, file_tracker};
 use std::path::PathBuf;
@@ -47,9 +46,6 @@ fn setup_config() -> (String, file_tracker::Tracker) {
 }
 
 fn main() {
-  println!("{}", "Starting git-check-cli".bold());
-
   let (configs_path, mut tracker) = setup_config();
-
   cli::run(&mut tracker, configs_path);
 }

@@ -4,6 +4,7 @@
 use std::{fs, process};
 
 use clap::{command, Parser, Subcommand};
+use colored::Colorize;
 use inquire::{Confirm, Select, Text};
 use yaml_rust::{Yaml, YamlEmitter};
 
@@ -35,6 +36,8 @@ pub fn get_cli_options() -> Options {
 }
 
 pub fn run(tracker: &mut Tracker, config_path: String) {
+  println!("{}", "Starting git-check-cli".bold());
+
   let options = get_cli_options();
 
   match &options.command {

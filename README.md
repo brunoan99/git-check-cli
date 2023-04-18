@@ -16,16 +16,18 @@ The path in projects list always needs to be absolute, relative paths will not w
 
 ## Idea
 
+---**Break code of cli mod in smaller pieces**
+
 ---Warning of BadInputs in yaml file
 
 ---Control different forms of Display
 Move Result|Display to outside of git_tracker, maybe some folder that uses both file_tracker and git_tracker, cause it can generate a result based on the file_tracker options
 
-should be able to use cli options in future
-
+**should be able to use cli options in future**
 
 ---Execution
 if no command was provided call a Selec with all options
+
 ## Display
 
 **Example**:
