@@ -16,16 +16,17 @@ impl TryFrom<Vec<Yaml>> for Tracker {
   fn try_from(value: Vec<Yaml>) -> Result<Self, Self::Error> {
     let yaml = &value[0];
     let mut errors = vec![];
-    let configs_yaml = &yaml["configs"];
-    let configs: OptionSet = configs_yaml.into();
-    let projects_yaml = &yaml["projects-list"];
-    let projects: Vec<Project> = projects_yaml
+
+    let configs = OptionSet::from(&yaml["configs"]);
+
+    let projects: Vec<Project> = yaml["projects-list"]
       .as_vec()
       .unwrap()
       .iter()
       .map(Project::try_from)
       .filter_map(|r| r.map_err(|e| errors.push(e)).ok())
       .collect();
+
     if errors.is_empty() {
       Ok(Self {
         options: configs,

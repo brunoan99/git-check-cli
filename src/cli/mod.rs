@@ -7,7 +7,7 @@ use clap::{command, Parser, Subcommand};
 use inquire::{Confirm, Select, Text};
 use yaml_rust::{Yaml, YamlEmitter};
 
-use crate::{file_tracker, map_result_to_short_display, ShortDisplay, Tracker};
+use crate::{file_tracker, Display, Tracker};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -34,19 +34,19 @@ pub fn get_cli_options() -> Options {
   Options::parse()
 }
 
-pub fn run_cli(tracker: &mut Tracker, config_path: String) {
+pub fn run(tracker: &mut Tracker, config_path: String) {
   let options = get_cli_options();
 
   match &options.command {
     Commands::Check => {
-      let git_results: Vec<ShortDisplay> = tracker
+      let git_results: Vec<()> = tracker
         .projects
         .iter()
-        .map(map_result_to_short_display)
+        .map(|project| {
+          let display = Display::from(project, &tracker.options);
+          println!("{display}");
+        })
         .collect();
-      for result in git_results {
-        println!("{result}");
-      }
     }
     Commands::CheckPath => {
       let project = Select::new("chose to check:", tracker.projects.clone())
@@ -55,8 +55,8 @@ pub fn run_cli(tracker: &mut Tracker, config_path: String) {
           eprintln!("Error selecting project, err: {err}");
           process::exit(1);
         });
-      let git_result = map_result_to_short_display(&project);
-      println!("{git_result}");
+      let display = Display::from(&project, &tracker.options);
+      println!("{display}");
     }
     Commands::AddPath => {
       let name = Text::new("Project name:").prompt().unwrap_or_else(|err| {

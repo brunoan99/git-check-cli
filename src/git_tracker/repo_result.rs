@@ -58,10 +58,11 @@ pub struct FileChange {
 
 impl From<&str> for FileChange {
   fn from(value: &str) -> Self {
+    let path = value.split_whitespace().last().unwrap_or("").into();
     let tracked = !(value.starts_with(' ') || value.starts_with('?'));
-    let change = value.split_whitespace().next().unwrap().into();
+    let change = value.split_whitespace().next().unwrap_or("").into();
     Self {
-      path: value.split_whitespace().last().unwrap().into(),
+      path,
       tracked,
       change,
     }
@@ -171,6 +172,9 @@ pub enum ResultErrors {
   GitFetchingError,
 }
 
+/// # Errors
+///
+/// Will return `Err`if any process of info or query return error.
 pub fn map_project_to_result(project: &Project) -> Result<RepoResult, ResultErrors> {
   match RepoInfo::try_from(project) {
     Ok(repo_info) => match RepoQuery::try_from(repo_info) {

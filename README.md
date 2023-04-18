@@ -16,6 +16,8 @@ The path in projects list always needs to be absolute, relative paths will not w
 
 ## Idea
 
+---Warning of BadInputs in yaml file
+
 ---Control different forms of Display
 Move Result|Display to outside of git_tracker, maybe some folder that uses both file_tracker and git_tracker, cause it can generate a result based on the file_tracker options
 

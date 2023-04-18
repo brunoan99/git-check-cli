@@ -11,7 +11,16 @@ impl From<&Yaml> for OptionSet {
   fn from(value: &Yaml) -> Self {
     let mut bad_options = vec![];
     let mut verbose = false;
-    for config in value.as_vec().unwrap().iter() {
+
+    let configs = value.as_vec().map_or_else(
+      || {
+        bad_options.push(value.clone());
+        vec![]
+      },
+      std::clone::Clone::clone,
+    );
+
+    for config in &configs {
       match config {
         Yaml::Hash(hash) => {
           let key_opt = hash.keys().next();
@@ -21,12 +30,12 @@ impl From<&Yaml> for OptionSet {
               "verbose" => {
                 verbose = value.to_owned();
               }
-              _ => bad_options.push(config.to_owned()),
+              _ => bad_options.push(config.clone()),
             },
-            _ => bad_options.push(config.to_owned()),
+            _ => bad_options.push(config.clone()),
           }
         }
-        _ => bad_options.push(config.to_owned()),
+        _ => bad_options.push(config.clone()),
       }
     }
     Self {
@@ -38,7 +47,7 @@ impl From<&Yaml> for OptionSet {
 
 impl From<OptionSet> for Yaml {
   fn from(value: OptionSet) -> Self {
-    let mut config_array: Vec<Yaml> = value.bad_options;
+    let mut config_array: Vec<Self> = value.bad_options;
 
     let mut verbose_map: LinkedHashMap<Self, Self> = LinkedHashMap::new();
     verbose_map.insert(Self::String("verbose".into()), Self::Boolean(value.verbose));

@@ -51,5 +51,5 @@ fn main() {
 
   let (configs_path, mut tracker) = setup_config();
 
-  cli::run_cli(&mut tracker, configs_path);
+  cli::run(&mut tracker, configs_path);
 }
