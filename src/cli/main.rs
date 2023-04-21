@@ -1,13 +1,11 @@
 use super::Options;
 
-use std::{fs, process};
-
 use clap::Parser;
 use colored::Colorize;
 use inquire::{Confirm, Select, Text};
-use yaml_rust::{Yaml, YamlEmitter};
+use yaml_rust::Yaml;
 
-use crate::{cli::Commands, file_tracker, Display, Tracker};
+use crate::{cli::Commands, file_mgr, file_tracker, Display, Tracker};
 
 #[must_use]
 pub fn get_cli_options() -> Options {
@@ -19,7 +17,7 @@ fn get_in_text(msg: &str) -> String {
     Ok(resp) => resp,
     Err(err) => {
       println!("Error in response: {err}");
-      process::exit(1);
+      std::process::exit(1);
     }
   }
 }
@@ -29,7 +27,7 @@ fn get_in_confirm(msg: &str, default: bool) -> bool {
     Ok(resp) => resp,
     Err(err) => {
       eprintln!("Error in confirm: {err}");
-      process::exit(1);
+      std::process::exit(1);
     }
   }
 }
@@ -39,19 +37,19 @@ fn get_in_select<T: std::fmt::Display>(msg: &str, options: Vec<T>) -> T {
     Ok(resp) => resp,
     Err(err) => {
       eprintln!("Error in select: {err}");
-      process::exit(1);
+      std::process::exit(1);
     }
   }
 }
 
 fn success(msg: &str) {
   println!("{msg}");
-  process::exit(0);
+  std::process::exit(0);
 }
 
 fn fail(msg: &str) {
   println!("{msg}");
-  process::exit(1);
+  std::process::exit(1);
 }
 
 pub fn run(tracker: &mut Tracker, config_path: String) {
@@ -59,11 +57,16 @@ pub fn run(tracker: &mut Tracker, config_path: String) {
 
   let options = get_cli_options();
 
+  let mut option_set = tracker.options.clone();
+  if let Some(v) = options.verbose {
+    option_set.verbose = v;
+  }
+
   match &options.command {
     Commands::Check => tracker
       .projects
       .iter()
-      .map(|project| println!("{}", Display::from(project, &tracker.options)))
+      .map(|project| println!("{}", Display::from(project, &option_set)))
       .for_each(drop),
     Commands::CheckProject { name: name_op } => {
       let project_to_check = name_op.as_ref().map_or_else(
@@ -73,7 +76,7 @@ pub fn run(tracker: &mut Tracker, config_path: String) {
           None => get_in_select("chose to remove:", tracker.projects.clone()),
         },
       );
-      println!("{}", Display::from(&project_to_check, &tracker.options));
+      println!("{}", Display::from(&project_to_check, &option_set));
     }
     Commands::AddProject {
       name: name_op,
@@ -92,18 +95,11 @@ pub fn run(tracker: &mut Tracker, config_path: String) {
         success("Project not added");
       }
       tracker.add_project(project_to_add);
-      // move it to file_mgr
-      let yaml_projects_list: Yaml = tracker.clone().into();
-      let mut out_str = String::new();
-      let mut emitter = YamlEmitter::new(&mut out_str);
-      if let Err(err) = emitter.dump(&yaml_projects_list) {
-        fail(&format!("Failed to write yaml: {err}"));
-      }
-      match fs::write(config_path, out_str) {
+      let yaml_tracker: Yaml = tracker.to_owned().into();
+      match file_mgr::write_yaml_file(&config_path, &yaml_tracker) {
         Ok(_) => success("Project added successfully"),
-        Err(err) => fail(&format!("failed to sync with file, err: {err}")),
+        Err(err) => fail(&err.to_string()),
       }
-      // move it to file_mgr
     }
     Commands::RemoveProject { name: name_op } => {
       let project_to_remove = name_op.as_ref().map_or_else(
@@ -119,18 +115,11 @@ pub fn run(tracker: &mut Tracker, config_path: String) {
         success("Project not removed");
       }
       tracker.remove_project(&project_to_remove);
-      // move it to file_mgr
-      let yaml_projects_list: Yaml = tracker.clone().into();
-      let mut out_str = String::new();
-      let mut emitter = YamlEmitter::new(&mut out_str);
-      if let Err(err) = emitter.dump(&yaml_projects_list) {
-        fail(&format!("Failed to write yaml: {err}"));
-      }
-      match fs::write(config_path, out_str) {
+      let yaml_tracker: Yaml = tracker.to_owned().into();
+      match file_mgr::write_yaml_file(&config_path, &yaml_tracker) {
         Ok(_) => success("Project removed successfully"),
-        Err(err) => fail(&format!("failed to sync with file, err: {err}")),
+        Err(err) => fail(&err.to_string()),
       }
-      // move it to file_mgr
     }
   }
 }

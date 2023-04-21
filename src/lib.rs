@@ -5,6 +5,8 @@ pub use git_tracker::*;
 
 pub mod file_mgr;
 
+pub mod process;
+
 pub mod file_tracker;
 pub use file_tracker::*;
 

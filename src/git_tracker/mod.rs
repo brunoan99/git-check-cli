@@ -1,4 +1,4 @@
-pub(super) mod process;
+pub(super) mod git_process;
 mod repo_info;
 mod repo_query;
 mod repo_result;

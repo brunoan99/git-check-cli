@@ -40,21 +40,6 @@ pub fn git_repo_in(path: &str) -> bool {
   git_path.exists()
 }
 
-pub fn get_absolute_path(exp: &str) -> String {
-  if exp.contains('$') {
-    let exp_to_eval = format!("/bin/echo {exp}");
-    let mut output = Command::new("sh")
-      .args(["-c", &exp_to_eval])
-      .output()
-      .unwrap();
-    remove_break_line(&mut output);
-    let path = str::from_utf8(&output.stdout).unwrap();
-    path.into()
-  } else {
-    exp.into()
-  }
-}
-
 pub fn get_branch(path: &str) -> String {
   let mut output = Command::new("/bin/git")
     .args(["branch", "--show-current"])

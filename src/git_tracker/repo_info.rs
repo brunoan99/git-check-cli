@@ -1,4 +1,4 @@
-use crate::{file_tracker, process};
+use crate::{file_tracker, git_process, process};
 
 #[derive(Clone, Debug)]
 pub struct RepoInfo {
@@ -19,21 +19,21 @@ impl TryFrom<&file_tracker::Project> for RepoInfo {
 
   fn try_from(value: &file_tracker::Project) -> Result<Self, Self::Error> {
     let path = value.path.as_str();
-    let absolute_path = process::get_absolute_path(path);
+    let absolute_path = process::eval_to_absolute_path(path);
     let path_to_check = absolute_path.as_str();
 
-    if !process::project_exist(path_to_check) {
+    if !git_process::project_exist(path_to_check) {
       return Err(RepoHidratateErrors::ProjectNotFound);
     }
-    if !process::git_repo_in(path_to_check) {
+    if !git_process::git_repo_in(path_to_check) {
       return Err(RepoHidratateErrors::GitNotFound);
     }
     Ok(Self {
       path: value.path.clone(),
       asbolute_path: absolute_path.clone(),
       name: value.name.clone(),
-      branch: process::get_branch(path_to_check),
-      remotes: process::get_remotes(path_to_check),
+      branch: git_process::get_branch(path_to_check),
+      remotes: git_process::get_remotes(path_to_check),
     })
   }
 }

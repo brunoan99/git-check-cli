@@ -1,4 +1,4 @@
-use super::{process, repo_info::RepoInfo};
+use super::{git_process, repo_info::RepoInfo};
 
 pub struct RepoQuery {
   pub repo: RepoInfo,
@@ -34,7 +34,7 @@ impl TryFrom<RepoInfo> for RepoQuery {
     let remote_names: Vec<&str> = value.remotes.iter().map(String::as_str).collect();
 
     let commits = CommitQuery {
-      query: process::get_uncommited_changes(path),
+      query: git_process::get_uncommited_changes(path),
     };
 
     if remote_names.is_empty() {
@@ -44,7 +44,7 @@ impl TryFrom<RepoInfo> for RepoQuery {
         remotes: RemoteQuery::NoRemote,
       })
     } else {
-      if process::fetch_repo(path).is_err() {
+      if git_process::fetch_repo(path).is_err() {
         return Err(GitFetchingError);
       };
       let remotes = RemoteQuery::Remotes(
@@ -52,8 +52,8 @@ impl TryFrom<RepoInfo> for RepoQuery {
           .iter()
           .map(|&remote_name| RemoteQueryData {
             remote: remote_name.into(),
-            push_query: process::get_unpushed_commits_by_remote(path, remote_name, branch),
-            pull_query: process::get_unpulled_commits_by_remote(path, remote_name, branch),
+            push_query: git_process::get_unpushed_commits_by_remote(path, remote_name, branch),
+            pull_query: git_process::get_unpulled_commits_by_remote(path, remote_name, branch),
           })
           .collect(),
       );

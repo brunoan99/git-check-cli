@@ -10,16 +10,15 @@ pub struct Tracker {
   pub projects: Vec<Project>,
 }
 
-impl TryFrom<Vec<Yaml>> for Tracker {
+impl TryFrom<&Yaml> for Tracker {
   type Error = String;
 
-  fn try_from(value: Vec<Yaml>) -> Result<Self, Self::Error> {
-    let yaml = &value[0];
+  fn try_from(value: &Yaml) -> Result<Self, Self::Error> {
     let mut errors = vec![];
 
-    let configs = OptionSet::from(&yaml["configs"]);
+    let configs = OptionSet::from(&value["configs"]);
 
-    let projects: Vec<Project> = yaml["projects-list"]
+    let projects: Vec<Project> = value["projects-list"]
       .as_vec()
       .unwrap()
       .iter()

@@ -37,37 +37,35 @@ impl Display {
     };
     let remotes_str = match &repo_result.remotes {
       RemoteTrack::NoRemote => String::new(),
-      RemoteTrack::Remotes(remotes_vec) => {
-        let string_vec: Vec<String> = remotes_vec
-          .iter()
-          .map(|item| {
-            let mut text = format!("[ {} ->", item.remote);
-            let mut has_changes = false;
-            if let PushChanges::Diff {
-              commits: _,
-              changes,
-            } = item.push
-            {
-              has_changes = true;
-              text.push_str(&format!(" to-push: {}", changes.to_string().yellow()));
-            }
-            if let PullChanges::Diff {
-              commits: _,
-              changes,
-            } = item.pull
-            {
-              has_changes = true;
-              text.push_str(&format!(" to-pull: {}", changes.to_string().yellow()));
-            }
-            if !has_changes {
-              text.push_str(&format!(" {}", "up to date".to_string().green()));
-            }
-            text.push_str(" ]");
-            text
-          })
-          .collect();
-        string_vec.join(" ")
-      }
+      RemoteTrack::Remotes(remotes_vec) => remotes_vec
+        .iter()
+        .map(|item| {
+          let mut text = format!("[ {} ->", item.remote);
+          let mut has_changes = false;
+          if let PushChanges::Diff {
+            commits: _,
+            changes,
+          } = item.push
+          {
+            has_changes = true;
+            text.push_str(&format!(" to-push: {}", changes.to_string().yellow()));
+          }
+          if let PullChanges::Diff {
+            commits: _,
+            changes,
+          } = item.pull
+          {
+            has_changes = true;
+            text.push_str(&format!(" to-pull: {}", changes.to_string().yellow()));
+          }
+          if !has_changes {
+            text.push_str(&format!(" {}", "up to date".to_string().green()));
+          }
+          text.push_str(" ]");
+          text
+        })
+        .collect::<Vec<String>>()
+        .join(" "),
     };
     Self(format!("{repo_name} {commit_str} {remotes_str}"))
   }
@@ -174,7 +172,7 @@ impl Display {
     Self(format!(
       "{} - {}\n  {}: {}\n",
       name.yellow().bold(),
-      process::get_absolute_path(path).bold(),
+      process::eval_to_absolute_path(path).bold(),
       "Error".bold(),
       error.red().bold(),
     ))

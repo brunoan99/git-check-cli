@@ -1,48 +1,26 @@
-use mylib::file_tracker::Tracker;
-use mylib::{cli, file_tracker};
-use std::path::PathBuf;
-use std::process;
-use std::{ffi::OsString, fs};
-use yaml_rust::YamlLoader;
-
-// proceess
-
-fn path_of_projects_list_file(home_path: PathBuf) -> Result<String, OsString> {
-  let mut project_file_paths = home_path;
-  project_file_paths.push(".config/git-check-cli/git-check-cli");
-  project_file_paths.set_extension("yaml");
-  project_file_paths.into_os_string().into_string()
-}
-
-// main
+use mylib::{cli, file_mgr, file_tracker, process};
 
 fn setup_config() -> (String, file_tracker::Tracker) {
-  let home_path = home::home_dir().unwrap_or_else(|| {
-    eprintln!("Error finding home directory!");
-    process::exit(1);
-  });
+  let path = "$HOME/.config/git-check-cli/git-check-cli.yaml";
+  let config_path = process::eval_to_absolute_path(path);
 
-  let config_path = path_of_projects_list_file(home_path).unwrap_or_else(|_| {
-    eprintln!("Error getting projects file path");
-    process::exit(1)
-  });
+  let yaml_config = match file_mgr::read_yaml(&config_path) {
+    Ok(content) => content,
+    Err(err) => {
+      eprintln!("{err}");
+      std::process::exit(1);
+    }
+  };
 
-  let contents = fs::read_to_string(config_path.clone()).unwrap_or_else(|err| {
-    eprintln!("Error reading projects list file, error: {err}");
-    process::exit(1);
-  });
+  let tracker = match file_tracker::Tracker::try_from(&yaml_config[0]) {
+    Ok(tracker) => tracker,
+    Err(err) => {
+      eprintln!("{err}");
+      std::process::exit(1);
+    }
+  };
 
-  let configs_yaml = YamlLoader::load_from_str(&contents).unwrap_or_else(|err| {
-    eprintln!("Error parsing file, error: {err}");
-    process::exit(1);
-  });
-
-  let tracker = Tracker::try_from(configs_yaml).unwrap_or_else(|err| {
-    eprintln!("{err}");
-    process::exit(1);
-  });
-
-  (config_path, tracker)
+  (config_path.into(), tracker)
 }
 
 fn main() {
