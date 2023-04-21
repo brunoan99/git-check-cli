@@ -24,7 +24,7 @@ impl TryFrom<Vec<Yaml>> for Tracker {
       .unwrap()
       .iter()
       .map(Project::try_from)
-      .filter_map(|r| r.map_err(|e| errors.push(e)).ok())
+      .filter_map(|res| res.map_err(|err| errors.push(err)).ok())
       .collect();
 
     if errors.is_empty() {
@@ -59,5 +59,10 @@ impl Tracker {
 
   pub fn remove_project(&mut self, project: &Project) {
     self.projects.retain(|p| !(p == project));
+  }
+
+  #[must_use]
+  pub fn find_project(&self, name: &str) -> Option<&Project> {
+    self.projects.iter().find(|p| p.name == name)
   }
 }
