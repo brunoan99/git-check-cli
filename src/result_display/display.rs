@@ -82,10 +82,10 @@ impl Display {
     match map_project_to_result(project) {
       Ok(repo_result) => Self::short_from_result(&repo_result), // &repo_result,
       Err(ResultErrors::ProjectNotFound) => {
-        Self::short_error(&project.name, "Folder was found in specified path")
+        Self::short_error(&project.name, "Folder was not found in specified path")
       }
       Err(ResultErrors::GitNotFound) => {
-        Self::short_error(&project.name, "Git Repository was found in specified path")
+        Self::short_error(&project.name, "Git Repository was not found in specified path")
       }
       Err(ResultErrors::GitFetchingError) => {
         Self::short_error(&project.name, "Fetching error into git remotes")
@@ -184,12 +184,12 @@ impl Display {
       Err(ResultErrors::ProjectNotFound) => Self::verbose_error(
         &project.name,
         &project.path,
-        "Folder was found in specified path",
+        "Folder was not found in specified path",
       ),
       Err(ResultErrors::GitNotFound) => Self::verbose_error(
         &project.name,
         &project.path,
-        "Git Repository was found in specified path",
+        "Git Repository was not found in specified path",
       ),
       Err(ResultErrors::GitFetchingError) => Self::verbose_error(
         &project.name,

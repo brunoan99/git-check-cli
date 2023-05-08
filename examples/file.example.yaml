@@ -1,7 +1,8 @@
 ---
 configs:
-  - verbose: true # or just '- verbose'
-
+  # 'true' for verbose display 'false' for short display
+  # '- verbose' will follow to same as 'verbose: true'
+  - verbose: true
 projects-list:
   - name: project
     path: $HOME/project-dir
