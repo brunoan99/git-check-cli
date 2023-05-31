@@ -33,7 +33,7 @@ impl Display {
       CommitTrack::UncommitedChanges {
         commits: _,
         changes,
-      } => format!("[ commits: {} ]", changes.to_string().yellow()),
+      } => format!("[ local: {} ]", changes.to_string().yellow()),
     };
     let remotes_str = match &repo_result.remotes {
       RemoteTrack::NoRemote => String::new(),
@@ -84,9 +84,10 @@ impl Display {
       Err(ResultErrors::ProjectNotFound) => {
         Self::short_error(&project.name, "Folder was not found in specified path")
       }
-      Err(ResultErrors::GitNotFound) => {
-        Self::short_error(&project.name, "Git Repository was not found in specified path")
-      }
+      Err(ResultErrors::GitNotFound) => Self::short_error(
+        &project.name,
+        "Git Repository was not found in specified path",
+      ),
       Err(ResultErrors::GitFetchingError) => {
         Self::short_error(&project.name, "Fetching error into git remotes")
       }
