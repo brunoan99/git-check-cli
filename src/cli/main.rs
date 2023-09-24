@@ -63,12 +63,17 @@ pub fn run(tracker: &mut Tracker, config_path: String) {
   }
 
   match &options.command {
-    Commands::Check => tracker
+    None => tracker
       .projects
       .iter()
       .map(|project| println!("{}", Display::from(project, &option_set)))
       .for_each(drop),
-    Commands::CheckProject { name: name_op } => {
+    Some(Commands::Check) => tracker
+      .projects
+      .iter()
+      .map(|project| println!("{}", Display::from(project, &option_set)))
+      .for_each(drop),
+    Some(Commands::CheckProject { name: name_op }) => {
       let project_to_check = name_op.as_ref().map_or_else(
         || get_in_select("chose to remove:", tracker.projects.clone()),
         |name| match tracker.find_project(name) {
@@ -78,10 +83,10 @@ pub fn run(tracker: &mut Tracker, config_path: String) {
       );
       println!("{}", Display::from(&project_to_check, &option_set));
     }
-    Commands::AddProject {
+    Some(Commands::AddProject {
       name: name_op,
       path: path_op,
-    } => {
+    }) => {
       let name = name_op
         .as_ref()
         .map_or_else(|| get_in_text("Name"), String::from);
@@ -101,7 +106,7 @@ pub fn run(tracker: &mut Tracker, config_path: String) {
         Err(err) => fail(&err.to_string()),
       }
     }
-    Commands::RemoveProject { name: name_op } => {
+    Some(Commands::RemoveProject { name: name_op }) => {
       let project_to_remove = name_op.as_ref().map_or_else(
         || get_in_select("chose to remove:", tracker.projects.clone()),
         |name| match tracker.find_project(name) {

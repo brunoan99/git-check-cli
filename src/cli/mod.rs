@@ -17,7 +17,7 @@ pub struct Options {
   pub verbose: Option<bool>,
 
   #[command(subcommand)]
-  pub command: Commands,
+  pub command: Option<Commands>,
 }
 
 #[derive(Subcommand)]
