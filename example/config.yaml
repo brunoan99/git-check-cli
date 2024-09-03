@@ -1,0 +1,12 @@
+---
+configs:
+  # 'true' for verbose display 'false' for short display
+  # 'verbose' will follow to same as 'verbose: true'
+  verbose: true
+projects:
+  - name: blog
+    path: $HOME/workspace/js/blog
+  - name: terminal
+    path: $HOME/workspace/js/terminal
+  - name: pomotimer
+    path: $HOME/workspace/js/pomotimer
