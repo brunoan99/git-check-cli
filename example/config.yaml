@@ -9,4 +9,6 @@ projects:
   - name: terminal
     path: $HOME/workspace/js/terminal
   - name: pomotimer
-    path: $HOME/workspace/js/pomotimer
+    path: $HOME/workspace/js/pomotimer1
+  - name: gittest1
+    path: $HOME/gittest1
