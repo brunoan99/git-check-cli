@@ -6,6 +6,7 @@ import (
 
 	process "github.com/brunoan99/git-check-cli/src"
 	"github.com/brunoan99/git-check-cli/src/configs"
+	"github.com/brunoan99/git-check-cli/src/git"
 	"github.com/brunoan99/git-check-cli/src/utils"
 	"github.com/spf13/cobra"
 )
@@ -44,9 +45,9 @@ var rootCmd = &cobra.Command{
 
 		errors := []process.DisplayErrorInfo{}
 
-		for i := 0; i < len(setup.Projects); i++ {
-			fmt.Println("Start Project: ", setup.Projects[i].Name)
-			_, err := process.FullProcess(&setup.Projects[i])
+		for _, project := range setup.Projects {
+			fmt.Println("Start Project: ", project.Name)
+			_, err := process.FullProcess(&project)
 			fmt.Println(err)
 			if !utils.IsStructEmpty(err) {
 				errors = append(errors, err)
@@ -57,8 +58,8 @@ var rootCmd = &cobra.Command{
 		fmt.Println("---")
 		fmt.Println()
 
-		for j := 0; j < len(errors); j++ {
-			fmt.Println(errors[j].Message)
+		for _, err := range errors {
+			fmt.Println(err.Error())
 		}
 	},
 }
@@ -71,8 +72,25 @@ var versionCmd = &cobra.Command{
 	},
 }
 
+var testCmd = &cobra.Command{
+	Use: "test",
+	Run: func(cmd *cobra.Command, args []string) {
+		path := "/home/snape/gittest3"
+		fmt.Println("Testing on ", path)
+
+		branchs, err := git.GetBranchs(path)
+		utils.PanicOnError(err)
+		fmt.Println("Branchs: ", branchs)
+
+		remotes, err := git.GetRemotes(path)
+		utils.PanicOnError(err)
+		fmt.Println("Remotes: ", remotes)
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(testCmd)
 	rootCmd.SuggestionsMinimumDistance = 2
 
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "verbose output")

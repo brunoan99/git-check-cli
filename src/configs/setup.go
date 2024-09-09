@@ -50,7 +50,7 @@ func (p *Project) resolveProjectPath() error {
 }
 
 func (s *Setup) ResolveProjectsPath() error {
-	for i := 0; i < len(s.Projects); i++ {
+	for i := range s.Projects {
 		err := s.Projects[i].resolveProjectPath()
 		if err != nil {
 			return err

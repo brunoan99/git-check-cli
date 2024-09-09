@@ -22,8 +22,7 @@ func ResolvePath(path string) (string, error) {
 	pathSplited := strings.Split(path, "/")
 	pathOutput := []string{}
 
-	for i := 0; i < len(pathSplited); i++ {
-		pathPart := pathSplited[i]
+	for _, pathPart := range pathSplited {
 		toSearch, found := strings.CutPrefix(pathPart, "$")
 		if found {
 			value, ok := os.LookupEnv(toSearch)

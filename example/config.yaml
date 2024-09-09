@@ -12,3 +12,7 @@ projects:
     path: $HOME/workspace/js/pomotimer1
   - name: gittest1
     path: $HOME/gittest1
+  - name: gittest2
+    path: $HOME/gittest2
+  - name: gittest3
+    path: $HOME/gittest3
