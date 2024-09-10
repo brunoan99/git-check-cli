@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	process "github.com/brunoan99/git-check-cli/src"
+	exec "github.com/brunoan99/git-check-cli/src"
 	"github.com/brunoan99/git-check-cli/src/configs"
-	"github.com/brunoan99/git-check-cli/src/git"
+	"github.com/brunoan99/git-check-cli/src/process"
 	"github.com/brunoan99/git-check-cli/src/utils"
 	"github.com/spf13/cobra"
 )
@@ -43,11 +43,11 @@ var rootCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("Setup In Run: %+v \n\n", setup)
 
-		errors := []process.DisplayErrorInfo{}
+		errors := []exec.DisplayErrorInfo{}
 
 		for _, project := range setup.Projects {
 			fmt.Println("Start Project: ", project.Name)
-			_, err := process.FullProcess(&project)
+			_, err := exec.FullProcess(&project)
 			fmt.Println(err)
 			if !utils.IsStructEmpty(err) {
 				errors = append(errors, err)
@@ -75,14 +75,14 @@ var versionCmd = &cobra.Command{
 var testCmd = &cobra.Command{
 	Use: "test",
 	Run: func(cmd *cobra.Command, args []string) {
-		path := "/home/snape/gittest3"
+		path := "/home/snape/workspace/js/blog"
 		fmt.Println("Testing on ", path)
 
-		branchs, err := git.GetBranchs(path)
+		branchs, err := process.GetBranchs(path)
 		utils.PanicOnError(err)
 		fmt.Println("Branchs: ", branchs)
 
-		remotes, err := git.GetRemotes(path)
+		remotes, err := process.GetRemotes(path)
 		utils.PanicOnError(err)
 		fmt.Println("Remotes: ", remotes)
 	},

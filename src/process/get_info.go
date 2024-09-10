@@ -1,4 +1,4 @@
-package git
+package process
 
 import (
 	"os/exec"
