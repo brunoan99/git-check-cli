@@ -25,12 +25,12 @@ type Remote struct {
 }
 
 func GetGitRepository(path string) (GitRepository, error) {
-	branchs, err := GetBranchs(path)
+	branchs, err := getBranchs(path)
 	if err != nil {
 		return GitRepository{}, err
 	}
 
-	remotes, err := GetRemotes(path)
+	remotes, err := getRemotes(path)
 	if err != nil {
 		return GitRepository{}, err
 	}
@@ -42,7 +42,7 @@ func GetGitRepository(path string) (GitRepository, error) {
 	}, nil
 }
 
-func GetBranchs(path string) ([]Branch, error) {
+func getBranchs(path string) ([]Branch, error) {
 	cmd := exec.Command("/usr/bin/git", "-P", "branch")
 	cmd.Dir = path
 	output, err := cmd.Output()
@@ -68,7 +68,7 @@ func GetBranchs(path string) ([]Branch, error) {
 	return branchs, nil
 }
 
-func GetRemotes(path string) ([]Remote, error) {
+func getRemotes(path string) ([]Remote, error) {
 	remotes := []Remote{}
 
 	cmd := exec.Command("/usr/bin/git", "-P", "remote", "-v")

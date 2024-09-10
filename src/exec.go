@@ -18,6 +18,8 @@ const (
 	ProjectDirectoryNotExists
 	ErrorOnCheckGitRepository
 	ProjectIsntGitRepository
+	ErronOnGetGitInformations
+	ErrorOnGetLocalDiffs
 )
 
 type DisplayErrorInfo struct {
@@ -57,6 +59,24 @@ func FullProcess(project *configs.Project) (DisplaySucessfullInfo, DisplayErrorI
 			Message: fmt.Sprintf("cannot find git repository at %s", project.Path),
 		}
 	}
+
+	repo, err := process.GetGitRepository(project.Path)
+	if err != nil {
+		return DisplaySucessfullInfo{}, DisplayErrorInfo{
+			Kind:    ErronOnGetGitInformations,
+			Message: fmt.Sprint("cannot get git repository informations cause: ", err.Error()),
+		}
+	}
+
+	localDiffs, err := process.CheckLocalDiff(repo)
+	if err != nil {
+		return DisplaySucessfullInfo{}, DisplayErrorInfo{
+			Kind:    ErrorOnGetLocalDiffs,
+			Message: fmt.Sprint("cannot get local diffs for git repository cause: ", err.Error()),
+		}
+	}
+
+	fmt.Println(localDiffs)
 
 	return DisplaySucessfullInfo{}, DisplayErrorInfo{}
 }

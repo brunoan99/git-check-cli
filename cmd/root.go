@@ -75,16 +75,16 @@ var versionCmd = &cobra.Command{
 var testCmd = &cobra.Command{
 	Use: "test",
 	Run: func(cmd *cobra.Command, args []string) {
-		path := "/home/snape/workspace/js/blog"
-		fmt.Println("Testing on ", path)
+		path := "/home/snape/go/src/github.com/brunoan99/git-check-cli"
+		fmt.Printf("Testing on %s\n\n", path)
 
-		branchs, err := process.GetBranchs(path)
+		repo, err := process.GetGitRepository(path)
 		utils.PanicOnError(err)
-		fmt.Println("Branchs: ", branchs)
+		fmt.Printf("Repo: %+v\n\n", repo)
 
-		remotes, err := process.GetRemotes(path)
+		localDiff, err := process.CheckLocalDiff(repo)
 		utils.PanicOnError(err)
-		fmt.Println("Remotes: ", remotes)
+		fmt.Printf("Local Diffs: %+v\n\n", localDiff)
 	},
 }
 
@@ -99,7 +99,7 @@ func init() {
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		// fmt.Println(err)
+		fmt.Println(err)
 		os.Exit(1)
 	}
 }
