@@ -20,6 +20,7 @@ const (
 	ProjectIsntGitRepository
 	ErronOnGetGitInformations
 	ErrorOnGetLocalDiffs
+	ErrorOnGetRemoteDiffs
 )
 
 type DisplayErrorInfo struct {
@@ -76,7 +77,16 @@ func FullProcess(project *configs.Project) (DisplaySucessfullInfo, DisplayErrorI
 		}
 	}
 
+	remoteDiffs, err := process.CheckRemoteDiff(repo)
+	if err != nil {
+		return DisplaySucessfullInfo{}, DisplayErrorInfo{
+			Kind:    ErrorOnGetRemoteDiffs,
+			Message: fmt.Sprint("cannot get remote diffs for git repository cause: ", err.Error()),
+		}
+	}
+
 	fmt.Println(localDiffs)
+	fmt.Println(remoteDiffs)
 
 	return DisplaySucessfullInfo{}, DisplayErrorInfo{}
 }

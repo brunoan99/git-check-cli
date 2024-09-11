@@ -85,6 +85,10 @@ var testCmd = &cobra.Command{
 		localDiff, err := process.CheckLocalDiff(repo)
 		utils.PanicOnError(err)
 		fmt.Printf("Local Diffs: %+v\n\n", localDiff)
+
+		remoteDiff, err := process.CheckRemoteDiff(repo)
+		utils.PanicOnError(err)
+		fmt.Printf("Remote Diffs: %+v\n\n", remoteDiff)
 	},
 }
 
